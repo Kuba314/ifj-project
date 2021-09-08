@@ -2,6 +2,7 @@ BasedOnStyle: LLVM
 IndentWidth: 4
 MaxEmptyLinesToKeep: 1
 SpaceBeforeParens: Never
+SpaceAfterCStyleCast: true
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: false
