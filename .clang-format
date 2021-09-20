@@ -1,19 +1,35 @@
 BasedOnStyle: LLVM
+
+# basic
 IndentWidth: 4
+ColumnLimit: 100
 MaxEmptyLinesToKeep: 1
+
+# braces
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterFunction: true
+IndentExternBlock: true
+
+# spaces
 SpaceBeforeParens: Never
 SpaceAfterCStyleCast: true
+Cpp11BracedListStyle: false
+
+# single-line code
 AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
+
+# preprocessor stuff
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex:           '^<'
-    Priority:        1
-  - Regex:           '^"'
-    Priority:        2
-IndentExternBlock: Indent
+  - Regex:          '^<'
+    Priority:       1
+  - Regex:          '^"'
+    Priority:       2
 IndentPPDirectives: BeforeHash
+SortIncludes: false
