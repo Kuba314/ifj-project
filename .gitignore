@@ -1,2 +1,9 @@
 *.o
 build/
+all_tests
+
+# Coverage report files
+coverage/
+*.gcda
+*.gcno
+*.info
