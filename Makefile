@@ -3,11 +3,15 @@ CXX = g++
 CFLAGS = -std=c11
 LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
-CPPFLAGS = -Werror -Wall -Wextra -pedantic --coverage
+CPPFLAGS = -Werror -Wall -Wextra -pedantic -Iinclude/ --coverage
 TARGETS = all_tests
+LIB_OBJECTS =
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
+
+COV_REPORT_FILES = coverage/ $(shell find . -type f \( -name '*.gc??' -o -name '*.info' \))
+ALL_OBJECTS = $(shell find . -type f -name '*.o')
 
 .PHONY: all test clean
 
@@ -17,7 +21,7 @@ vpath %.c src/
 all: all_tests
 
 # link test files with gtest
-all_tests: $(TEST_OBJECTS)
+all_tests: $(TEST_OBJECTS) $(LIB_OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lstdc++ -lgtest -lgtest_main
 
 test: all_tests
@@ -31,4 +35,4 @@ coverage: test
 	genhtml coverage.info --output-directory coverage -q
 
 clean:
-	rm -f $(TARGETS) *.o tests/*.o tests/*.gc?? *.info
+	rm -rf $(TARGETS) $(ALL_OBJECTS) $(COV_REPORT_FILES)
