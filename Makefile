@@ -13,7 +13,7 @@ TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
 COV_REPORT_FILES = coverage/ $(shell find . -type f \( -name '*.gc??' -o -name '*.info' \))
 ALL_OBJECTS = $(shell find . -type f -name '*.o')
 
-.PHONY: all test clean
+.PHONY: all test doc clean
 
 vpath %.h include/
 vpath %.c src/
@@ -26,6 +26,9 @@ all_tests: $(TEST_OBJECTS) $(LIB_OBJECTS)
 
 test: all_tests
 	./all_tests
+
+doc:
+	doxygen Doxyfile
 
 # collect *.gcda files, remove system includes and generate coverage html report
 # TODO: don't put --coverage into relase binaries, compile own binary with this flag
