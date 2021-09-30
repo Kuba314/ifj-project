@@ -5,7 +5,7 @@ LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
 CPPFLAGS = -Werror -Wall -Wextra -pedantic -Iinclude/ --coverage
 TARGETS = all_tests
-LIB_OBJECTS =
+LIB_OBJECTS = src/utils/dynstring.o
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
