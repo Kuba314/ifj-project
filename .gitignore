@@ -8,3 +8,6 @@ coverage/
 *.gcda
 *.gcno
 *.info
+
+# Clion editor config files
+.idea/
