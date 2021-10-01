@@ -9,7 +9,7 @@ MaxEmptyLinesToKeep: 1
 BreakBeforeBraces: Custom
 BraceWrapping:
     AfterFunction: true
-IndentExternBlock: true
+IndentExternBlock: Indent
 
 # spaces
 SpaceBeforeParens: Never
@@ -32,4 +32,4 @@ IncludeCategories:
   - Regex:          '^"'
     Priority:       2
 IndentPPDirectives: BeforeHash
-SortIncludes: false
+SortIncludes: Never
