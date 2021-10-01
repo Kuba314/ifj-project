@@ -5,4 +5,3 @@
 #include "scanner.h"
 
 FILE *fptr;
-
