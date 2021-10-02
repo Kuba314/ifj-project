@@ -6,6 +6,11 @@
 
 #include "dynstring.h"
 
+// Definition of all possible scanner states
+#define SCANNER_STATE_START 
+
+
+
 /**
  * @enum Definition of reserved keywords.
  */
@@ -65,7 +70,7 @@ typedef enum{
 } token_kind;
 
 /**
- * @enum Definition of token type
+ * @struct Definition of token type
  */
 typedef enum {
     token_kind kind;            // Kind of token. Keyword, operator, identifier, EOL, EOF...
