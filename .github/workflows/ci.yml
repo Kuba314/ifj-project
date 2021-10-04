@@ -13,13 +13,6 @@ jobs:
           wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
           sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-13 main'
           sudo apt-get install -y clang-format-13
+
       - name: Run clang-format
-        run: |
-          sources="$(find . -type f \( -name '*.h' -or -name '*.c'  -or -name '*.cpp' \) )"
-          num_errors=0
-          for source in $sources
-          do
-            diff "$source" <(clang-format-13 "$source")
-            [ "$?" != "0" ] && ((num_errors++))
-          done
-          exit $num_errors
+        run: ./check_format.sh
