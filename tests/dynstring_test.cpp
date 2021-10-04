@@ -15,7 +15,10 @@ class EmptyString : public ::testing::Test {
             throw std::bad_alloc();
         }
     }
-    virtual void TearDown() override { str_free(&str); }
+    virtual void TearDown() override
+    {
+        str_free(&str);
+    }
 
     string_t str;
 };
@@ -50,8 +53,14 @@ TEST(StringCreation, CreateFromHugeString)
     str_free(&str);
 }
 
-TEST_F(EmptyString, CheckNullByte) { EXPECT_EQ(str.ptr[0], '\0'); }
-TEST_F(EmptyString, CheckZeroLength) { EXPECT_EQ(str.length, 0); }
+TEST_F(EmptyString, CheckNullByte)
+{
+    EXPECT_EQ(str.ptr[0], '\0');
+}
+TEST_F(EmptyString, CheckZeroLength)
+{
+    EXPECT_EQ(str.length, 0);
+}
 TEST_F(EmptyString, AppendChar)
 {
     ASSERT_EQ(str_append_char(&str, 'a'), 0);
