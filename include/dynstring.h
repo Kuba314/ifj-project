@@ -12,9 +12,9 @@
  * @brief string type definition
  */
 typedef struct {
-    char *ptr;              ///< pointer to actual string data, null terminated
-    size_t alloc_length;    ///< size allocated in bytes
-    size_t length;          ///< length of the actual string
+    char *ptr;           ///< pointer to actual string data, null terminated
+    size_t alloc_length; ///< size allocated in bytes
+    size_t length;       ///< length of the actual string
 } string_t;
 
 int str_create_empty(string_t *str);
