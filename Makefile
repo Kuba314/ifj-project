@@ -22,7 +22,7 @@ all: all_tests
 
 # link test files with gtest
 all_tests: $(TEST_OBJECTS) $(LIB_OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lstdc++ -lgtest -lgtest_main
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lstdc++ -lgtest -lgtest_main -lpthread
 
 test: all_tests
 	./all_tests
