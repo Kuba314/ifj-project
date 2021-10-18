@@ -5,7 +5,7 @@ LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
 CPPFLAGS = -Werror -Wall -Wextra -pedantic -Iinclude/ --coverage
 TARGETS = all_tests
-LIB_OBJECTS = src/utils/dynstring.o src/utils/stack.o src/utils/search_key.o src/utils/binary_search_tree.o
+LIB_OBJECTS = src/utils/dynstring.o src/utils/stack.o src/utils/search_key.o src/utils/binary_search_tree.o src/utils/hashtablebase.o
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
@@ -21,7 +21,7 @@ vpath %.c src/
 all: all_tests
 
 # link test files with gtest
-all_tests: $(TEST_OBJECTS) $(LIB_OBJECTS) $(OBJECTS)
+all_tests: $(TEST_OBJECTS) $(LIB_OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lstdc++ -lgtest -lgtest_main -lpthread
 
 test: all_tests
