@@ -9,6 +9,7 @@ MaxEmptyLinesToKeep: 1
 BreakBeforeBraces: Custom
 BraceWrapping:
     AfterFunction: true
+    AfterEnum: true
 IndentExternBlock: Indent
 
 # spaces
