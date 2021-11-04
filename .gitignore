@@ -1,6 +1,7 @@
 *.o
 build/
 doc/
+__pycache__/
 all_tests
 
 # Coverage report files
