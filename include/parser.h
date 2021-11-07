@@ -12,3 +12,9 @@
  * @param[out] root AST will be constructed there
  */
 int parse(nterm_type_t nterm, ast_node_t **root);
+
+/**
+ * @brief Parse expression into AST tree
+ * @param[out] root AST will be constructed there
+ */
+int precedence_parse(ast_node_t **root);
