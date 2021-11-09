@@ -106,11 +106,11 @@ starting_symbol = '<program>'
 rules: Dict[str, List[List[str]]] = {
     '<program>':                [['require', '<string>', '<global-statement-list>']],
     '<global-statement-list>':  [['<global-statement>', '<global-statement-list>'], [EPS]],
-    '<global-statement>':       [['<func-decl>'], ['<func-def>'], ['<identifier>', '(', '<optional-expression-list>', ')']],
+    '<global-statement>':       [['<func-decl>'], ['<func-def>'], ['<func-call>']],
 
     '<func-decl>':                      [['global', '<identifier>', ':', 'function', '(', '<type-list>', ')', '<func-type-list>']],
     '<type-list>':                      [['<type>', '<type-list2>'], [EPS]],
-    '<type-list2>':                     [[',', '<type-list2>'], [EPS]],
+    '<type-list2>':                     [[',', '<type>', '<type-list2>'], [EPS]],
     '<func-def>':                       [['function', '<identifier>', '(', '<identifier-list-with-types>', ')', '<func-type-list>', '<statement-list>', 'end']],
     '<identifier-list-with-types>':     [['<identifier-with-type>', '<identifier-list-with-types2>'], [EPS]],
     '<identifier-list-with-types2>':    [[',', '<identifier-with-type>', '<identifier-list-with-types2>'], [EPS]],
@@ -141,7 +141,7 @@ rules: Dict[str, List[List[str]]] = {
     '<ret-expression-list>':            [['<expression>', '<ret-expression-list2>']],
     '<ret-expression-list2>':           [[',', '<expression>', '<ret-expression-list2>'], [EPS]],
 
-    '<func-call>': [['<identifier>', '(', '<optional-fun-expression-list>', ')'], [EPS]],
+    '<func-call>': [['<identifier>', '(', '<optional-fun-expression-list>', ')']],
     '<optional-fun-expression-list>':   [['<expression>', '<fun-expression-list2>'], [EPS]],
     '<fun-expression-list2>':           [[',', '<expression>', '<fun-expression-list2>'], [EPS]],
 }

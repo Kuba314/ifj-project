@@ -4,96 +4,134 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#include "type.h"
+#include "dynstring.h"
 
 // order of these two enums is crucial
 typedef enum
 {
-    NT_PROGRAM,
-    NT_RETURN_STATEMENT,
-    NT_RET_EXPRESSION_LIST,
-    NT_FOR_LOOP,
     NT_EXPRESSION_LIST,
+    NT_DECLARATION,
     NT_STATEMENT_LIST,
-    NT_DECL_OPTIONAL_ASSIGNMENT,
-    NT_OPTIONAL_FUN_EXPRESSION_LIST,
-    NT_EXPRESSION_LIST2,
-    NT_OPTIONAL_FOR_STEP,
-    NT_TYPE_LIST2,
-    NT_RET_EXPRESSION_LIST2,
-    NT_GLOBAL_STATEMENT,
-    NT_IDENTIFIER_LIST2,
-    NT_REPEAT_UNTIL,
-    NT_FUNC_DEF,
-    NT_ASSIGNMENT,
-    NT_FUNC_DECL,
+    NT_GLOBAL_STATEMENT_LIST,
+    NT_FUNC_TYPE_LIST2,
+    NT_STATEMENT,
+    NT_RET_EXPRESSION_LIST,
     NT_IDENTIFIER_LIST_WITH_TYPES,
     NT_IDENTIFIER_LIST_WITH_TYPES2,
-    NT_GLOBAL_STATEMENT_LIST,
-    NT_COND_STATEMENT,
-    NT_IDENTIFIER_WITH_TYPE,
-    NT_STATEMENT,
-    NT_FUN_EXPRESSION_LIST2,
-    NT_FUNC_TYPE_LIST2,
-    NT_IDENTIFIER_LIST,
-    NT_TYPE_LIST,
-    NT_FUNC_CALL,
-    NT_COND_OPT_ELSEIF,
-    NT_DECLARATION,
-    NT_FUNC_TYPE_LIST,
+    NT_TYPE_LIST2,
+    NT_ASSIGNMENT,
+    NT_GLOBAL_STATEMENT,
+    NT_REPEAT_UNTIL,
     NT_WHILE_LOOP,
+    NT_FUNC_TYPE_LIST,
+    NT_FUNC_DECL,
+    NT_FUNC_CALL,
+    NT_EXPRESSION_LIST2,
+    NT_FUN_EXPRESSION_LIST2,
+    NT_FUNC_DEF,
+    NT_IDENTIFIER_LIST,
+    NT_RET_EXPRESSION_LIST2,
+    NT_IDENTIFIER_WITH_TYPE,
+    NT_PROGRAM,
+    NT_IDENTIFIER_LIST2,
+    NT_FOR_LOOP,
+    NT_OPTIONAL_FUN_EXPRESSION_LIST,
+    NT_RETURN_STATEMENT,
+    NT_OPTIONAL_FOR_STEP,
+    NT_TYPE_LIST,
+    NT_COND_STATEMENT,
+    NT_DECL_OPTIONAL_ASSIGNMENT,
+    NT_COND_OPT_ELSEIF,
 } nterm_type_t;
 
 typedef enum
 {
-    T_FUNCTION,
-    T_WHILE,
-    T_TYPE,
-    T_CARET,
-    T_GT,
-    T_ELSEIF,
-    T_EQUALS,
-    T_BOOL,
-    T_THEN,
-    T_LPAREN,
-    T_END,
-    T_IDENTIFIER,
-    T_LT,
-    T_REQUIRE,
-    T_DOUBLE_EQUALS,
-    T_OPTIONAL_EXPRESSION_LIST,
-    T_GLOBAL,
-    T_ELSE,
-    T_NUMBER,
-    T_COLON,
-    T_MINUS,
-    T_LOCAL,
-    T_TILDE_EQUALS,
-    T_GTE,
-    T_HASH,
-    T_STRING,
     T_RETURN,
-    T_DOUBLE_DOT,
-    T_INTEGER,
+    T_IDENTIFIER,
     T_COMMA,
-    T_EOF,
-    T_FOR,
-    T_ASTERISK,
-    T_DO,
-    T_IF,
-    T_REPEAT,
-    T_UNTIL,
-    T_EXPRESSION,
-    T_BREAK,
-    T_PLUS,
-    T_SLASH,
-    T_RPAREN,
-    T_PERCENT,
+    T_THEN,
+    T_LT,
     T_NIL,
+    T_GLOBAL,
+    T_LPAREN,
+    T_UNTIL,
+    T_NUMBER,
+    T_WHILE,
+    T_EXPRESSION,
+    T_ELSE,
+    T_DO,
+    T_COLON,
+    T_ELSEIF,
+    T_END,
+    T_TILDE_EQUALS,
+    T_PLUS,
+    T_LOCAL,
+    T_SLASH,
+    T_BREAK,
+    T_IF,
+    T_STRING,
+    T_MINUS,
+    T_HASH,
+    T_TYPE,
+    T_FOR,
+    T_BOOL,
+    T_GTE,
+    T_FUNCTION,
     T_LTE,
     T_DOUBLE_SLASH,
+    T_REQUIRE,
+    T_DOUBLE_EQUALS,
+    T_DOUBLE_DOT,
+    T_ASTERISK,
+    T_CARET,
+    T_REPEAT,
+    T_EOF,
+    T_EQUALS,
+    T_PERCENT,
+    T_INTEGER,
+    T_GT,
+    T_RPAREN,
 } term_type_t;
+
+// nterm U term => nut
+typedef struct {
+    bool is_nterm;
+    union {
+        nterm_type_t nterm;
+        term_type_t term;
+    };
+} nut_type_t;
+
+typedef struct {
+    size_t size;
+    nut_type_t *data;
+    bool valid;
+} exp_list_t;
+
+// hashmap without collisions
+typedef struct {
+    size_t bucket_count;
+    exp_list_t data[];
+} parser_table_t;
+
+typedef struct {
+    term_type_t token_type;
+    union {
+        string_t string;
+        type_t type;
+        int64_t integer;
+        double number;
+    };
+} token_t;
+
 size_t parser_get_table_index(nterm_type_t nterm, term_type_t term);
 const char *nterm_to_readable(nterm_type_t nterm);
 const char *term_to_readable(term_type_t term);
 int parser_init();
 void parser_free();
+
+extern parser_table_t *table;
