@@ -52,14 +52,13 @@ TEST_F(EmptySymtable, AddScope)
 {
     EXPECT_EQ(symtable_push_scope(), E_OK); // push local scope
     EXPECT_EQ(symtable_pop_scope(), E_OK);  // push local scope
-    EXPECT_EQ(symtable_pop_scope(), E_OK);  // pop global scope
-    EXPECT_EQ(symtable_pop_scope(), E_INT); // invalid
+    EXPECT_EQ(symtable_pop_scope(), E_INT); // can't pop global scope
 }
 
 TEST_F(EmptySymtable, CheckSymbol)
 {
     test_data_t data("x");
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data), E_OK);
     test_data_t *ref = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref, nullptr);
     EXPECT_EQ(ref->name.ptr, data.name.ptr);
@@ -69,8 +68,8 @@ TEST_F(EmptySymtable, CheckTwoSymbols)
 {
     test_data_t data1("x");
     test_data_t data2("y");
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data1), E_OK);
-    EXPECT_EQ(symtable_put_symbol("y", (symbol_t *) &data2), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data1), E_OK);
+    EXPECT_EQ(symtable_put_symbol("y", (ast_node_t *) &data2), E_OK);
 
     test_data_t *ref1 = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref1, nullptr);
@@ -84,11 +83,11 @@ TEST_F(EmptySymtable, CheckTwoSymbolsMultipleScopes)
 {
     test_data_t data1("x");
     test_data_t data2("y");
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data1), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data1), E_OK);
 
     EXPECT_EQ(symtable_push_scope(), E_OK);
 
-    EXPECT_EQ(symtable_put_symbol("y", (symbol_t *) &data2), E_OK);
+    EXPECT_EQ(symtable_put_symbol("y", (ast_node_t *) &data2), E_OK);
 
     test_data_t *ref1 = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref1, nullptr);
@@ -102,7 +101,7 @@ TEST_F(EmptySymtable, CheckSymbolOvershadowing)
 {
     test_data_t data1("x");
     test_data_t data2("y");
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data1), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data1), E_OK);
 
     test_data_t *ref = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref, nullptr);
@@ -114,7 +113,7 @@ TEST_F(EmptySymtable, CheckSymbolOvershadowing)
     ASSERT_NE(ref, nullptr);
     EXPECT_EQ(ref->name.ptr, data1.name.ptr);
 
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data2), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data2), E_OK);
 
     ref = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref, nullptr);
@@ -124,12 +123,12 @@ TEST_F(EmptySymtable, CheckSymbolOvershadowing)
 TEST_F(EmptySymtable, CheckFindCurrent)
 {
     test_data_t data1("x");
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data1), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data1), E_OK);
 
     EXPECT_EQ(symtable_push_scope(), E_OK);
 
     test_data_t data2("y");
-    EXPECT_EQ(symtable_put_symbol("y", (symbol_t *) &data2), E_OK);
+    EXPECT_EQ(symtable_put_symbol("y", (ast_node_t *) &data2), E_OK);
 
     test_data_t *ref = (test_data_t *) symtable_find_in_current("x");
     EXPECT_EQ(ref, nullptr);
@@ -142,12 +141,12 @@ TEST_F(EmptySymtable, CheckFindCurrent)
 TEST_F(EmptySymtable, CheckFindGlobal)
 {
     test_data_t data1("x#0");
-    EXPECT_EQ(symtable_put_in_global("x", (symbol_t *) &data1), E_OK);
+    EXPECT_EQ(symtable_put_in_global("x", (ast_node_t *) &data1), E_OK);
 
     EXPECT_EQ(symtable_push_scope(), E_OK);
 
     test_data_t data2("x#1");
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data2), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data2), E_OK);
 
     test_data_t *ref = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref, nullptr);
@@ -162,23 +161,46 @@ TEST_F(EmptySymtable, CheckMangling)
 {
     test_data_t data1("x");
     EXPECT_EQ(symtable_create_mangled_id(&data1.name), E_OK);
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data1), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data1), E_OK);
 
     test_data_t *ref = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref, nullptr);
-    EXPECT_EQ(std::string(ref->name.ptr), std::string("x#0"));
+    EXPECT_EQ(std::string(ref->name.ptr), std::string("x0"));
 
     EXPECT_EQ(symtable_push_scope(), E_OK);
 
     test_data_t data2("x");
     EXPECT_EQ(symtable_create_mangled_id(&data2.name), E_OK);
-    EXPECT_EQ(symtable_put_symbol("x", (symbol_t *) &data2), E_OK);
+    EXPECT_EQ(symtable_put_symbol("x", (ast_node_t *) &data2), E_OK);
 
     ref = (test_data_t *) symtable_find("x");
     ASSERT_NE(ref, nullptr);
-    EXPECT_EQ(std::string(ref->name.ptr), std::string("x#1"));
+    EXPECT_EQ(std::string(ref->name.ptr), std::string("x1"));
 
     ref = (test_data_t *) symtable_find_in_global("x");
     ASSERT_NE(ref, nullptr);
-    EXPECT_EQ(std::string(ref->name.ptr), std::string("x#0"));
+    EXPECT_EQ(std::string(ref->name.ptr), std::string("x0"));
+}
+
+TEST_F(EmptySymtable, CheckLabels)
+{
+    test_data_t data1("");
+    EXPECT_EQ(symtable_create_mangled_label(&data1.name), E_OK);
+    EXPECT_EQ(std::string(data1.name.ptr), std::string("0&0"));
+
+    symtable_increment_label_counter();
+    test_data_t data2("");
+    EXPECT_EQ(symtable_create_mangled_label(&data2.name), E_OK);
+    EXPECT_EQ(std::string(data2.name.ptr), std::string("0&1"));
+
+    EXPECT_EQ(symtable_push_scope(), E_OK);
+
+    test_data_t data3("");
+    EXPECT_EQ(symtable_create_mangled_label(&data3.name), E_OK);
+    EXPECT_EQ(std::string(data3.name.ptr), std::string("1&0"));
+
+    symtable_increment_label_counter();
+    test_data_t data4("");
+    EXPECT_EQ(symtable_create_mangled_label(&data4.name), E_OK);
+    EXPECT_EQ(std::string(data4.name.ptr), std::string("1&1"));
 }
