@@ -11,7 +11,8 @@ LIB_OBJECTS = src/utils/dynstring.o \
               src/utils/binary_search_tree.o \
               src/utils/hashtablebase.o \
               src/utils/deque.o \
-	      	  src/scanner.o
+  	      src/scanner.o \
+	      src/symtable.o
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
@@ -45,3 +46,4 @@ coverage: test
 
 clean:
 	rm -rf $(TARGETS) $(ALL_OBJECTS) $(COV_REPORT_FILES)
+
