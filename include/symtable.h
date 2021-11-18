@@ -17,8 +17,6 @@
 #include "hashtable_bst.h"
 #include "ast.h"
 
-typedef ast_node_t symbol_t;
-
 /**
  * @brief Initializes symtable stack
  *
@@ -39,7 +37,7 @@ void symtable_free();
 int symtable_push_scope();
 
 /**
- * @brief Pops and releases scope from memory
+ * @brief Pops and releases scope from memory. global scope can't be popped (E_INT)
  *
  * @return E_INT if symtable is empty, othewise E_OK4
  */
@@ -52,7 +50,7 @@ int symtable_pop_scope();
  * @param data pointer to symbol data structure
  * @return E_INT on allocation error or empty symtable, othewise E_OK
  */
-int symtable_put_symbol(const char *identifier, symbol_t *data);
+int symtable_put_symbol(const char *identifier, ast_node_t *data);
 
 /**
  * @brief Inserts symbol into global
@@ -61,7 +59,7 @@ int symtable_put_symbol(const char *identifier, symbol_t *data);
  * @param data pointer to symbol data structure
  * @return E_INT on allocation error or empty symtable, othewise E_OK
  */
-int symtable_put_in_global(const char *identifier, symbol_t *data);
+int symtable_put_in_global(const char *identifier, ast_node_t *data);
 
 /**
  * @brief Tries to find symbol in all scopes
@@ -69,7 +67,7 @@ int symtable_put_in_global(const char *identifier, symbol_t *data);
  * @param identifier string id
  * @return pointer to symbol data if found, othewise NULL
  */
-symbol_t *symtable_find(const char *identifier);
+ast_node_t *symtable_find(const char *identifier);
 
 /**
  * @brief Tries to find symbol in global scope
@@ -77,7 +75,7 @@ symbol_t *symtable_find(const char *identifier);
  * @param identifier string id
  * @return pointer to symbol data if found, othewise NULL
  */
-symbol_t *symtable_find_in_global(const char *identifier);
+ast_node_t *symtable_find_in_global(const char *identifier);
 
 /**
  * @brief Tries to find symbol in only current scope
@@ -85,12 +83,33 @@ symbol_t *symtable_find_in_global(const char *identifier);
  * @param identifier string id
  * @return pointer to symbol data if found, othewise NULL
  */
-symbol_t *symtable_find_in_current(const char *identifier);
+ast_node_t *symtable_find_in_current(const char *identifier);
 
 /**
  * @brief Appends suffix to create unique identifier
  *
  * @param dest pointer to string to be appended to
- * @return E_INT on allocation error or empty symtable, othewise E_OK
+ * @return E_INT on allocation error, othewise E_OK
  */
 int symtable_create_mangled_id(string_t *dest);
+
+/**
+ * @brief Appends suffix to create unique label
+ *
+ * @param dest pointer to string to be appended to
+ * @return E_INT on allocation error, othewise E_OK
+ */
+int symtable_create_mangled_label(string_t *dest);
+
+/**
+ * @brief Returns depth of current scope
+ *
+ * @return number from 0 to n
+ */
+int symtable_scope_level();
+
+/**
+ * @brief Increments label counter in current scope
+ *
+ */
+void symtable_increment_label_counter();
