@@ -48,10 +48,10 @@ void initialise_file_ptr(FILE *source_file);
 /**
  * Closes file assigned *fptr.
  *
- * @param p Pointer to input stream.
+ * @param fp Pointer to input stream.
  * @return E_OK on success, otherwise E_LEX.
  */
-int close_file(FILE *p);
+int close_file(FILE *fp);
 
 /**
  * Main function of scanner, which gets the next token from *fptr.

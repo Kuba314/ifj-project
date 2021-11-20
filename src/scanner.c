@@ -179,7 +179,7 @@ static int process_integer(string_t *str, token_t *t)
  * @param str Pointer to string containing integer number.
  * @return escaped integer on success, otherwise 0.
  */
-static short unsigned int process_escape(char *str)
+uint16_t process_escape(char *str)
 {
     char *p = NULL;
     unsigned short int_val = (int64_t) strtol(str, &p, 10);
@@ -222,45 +222,29 @@ void initialise_file_ptr(FILE *source_file)
     fptr = source_file;
 }
 
-int close_file(FILE *p)
+int close_file(FILE *fp)
 {
-    if(!fclose(p)) {
-        return E_OK;
-    } else {
-        return E_LEX;
+    if(fclose(fp)) {
+        return E_INT;
     }
+    return E_OK;
 }
 
 int unget_token(token_t *t)
 {
     // Check if last_token is already being used.
-    if(unget_token_count) {
-        if(unget_token_count > 1) {
-            // token storage is full
-            return E_LEX;
-        } else {
-            unget_tokens[0] = *t;
-            unget_token_count++;
-        }
-    } else {
-        unget_tokens[1] = *t;
-        unget_token_count++;
+    if(unget_token_count == TOKEN_BUF_LENGTH) {
+        return E_LEX;
     }
-
+    unget_tokens[unget_token_count++] = *t;
     return E_OK;
 }
 
 int get_next_token(token_t *t)
 {
     // Returns a saved token in case it was set.
-    if(unget_token_count) {
-
-        if(unget_token_count == 2) {
-            *t = unget_tokens[0];
-        } else {
-            *t = unget_tokens[1];
-        }
-        unget_token_count--;
+    if(unget_token_count > 0) {
+        *t = unget_tokens[--unget_token_count];
         return E_OK;
     }
 
