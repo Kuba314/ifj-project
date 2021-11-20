@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#define TOKEN_BUF_LENGTH 2
+
 typedef enum
 {
     SCANNER_STATE_START,              ///> Starting state, where scanner returns after every token
@@ -56,15 +58,15 @@ typedef enum
 } scanner_state;
 
 static FILE *fptr;
-static token_t last_token;
-static token_t second_token;
+static token_t unget_tokens[TOKEN_BUF_LENGTH];
 static short unsigned unget_token_count = 0;
 
 /**
  * Identifies keyword.
  *
  *
- * @param string_t Pointer to string containing identifier name or reserved keyword.
+ * @param[out] t Pointer token, to which attributes are assigned
+ * @param str Pointer to string containing identifier name or reserved keyword.
  */
 static void identify_keyword(string_t *str, token_t *t)
 {
@@ -153,7 +155,7 @@ static void identify_keyword(string_t *str, token_t *t)
  * Parses dynamic string to integer.
  *
  *
- * @param string_t Pointer to string containing integer number.
+ * @param[out] t Pointer to string containing integer number.
  * @return 0 on success, otherwise 1.
  */
 static int process_integer(string_t *str, token_t *t)
@@ -174,8 +176,8 @@ static int process_integer(string_t *str, token_t *t)
  * Parses escape sequence to integer.
  *
  *
- * @param string_t Pointer to string containing integer number.
- * @return escaped integer value on success, otherwise 0.
+ * @param str Pointer to string containing integer number.
+ * @return escaped integer on success, otherwise 0.
  */
 static short unsigned int process_escape(char *str)
 {
@@ -197,7 +199,8 @@ static short unsigned int process_escape(char *str)
  * Parses dynamic string to decimal.
  *
  *
- * @param string_t Pointer to string containing integer number.
+ * @param[out] t Pointer to token, to which attributes are assigned
+ * @param str Pointer to string containing integer number.
  * @return 0 on success, otherwise return errno.
  */
 static int process_decimal(string_t *str, token_t *t)
@@ -221,7 +224,11 @@ void initialise_file_ptr(FILE *source_file)
 
 int close_file(FILE *p)
 {
-    return fclose(p);
+    if(!fclose(p)) {
+        return E_OK;
+    } else {
+        return E_LEX;
+    }
 }
 
 int unget_token(token_t *t)
@@ -230,17 +237,17 @@ int unget_token(token_t *t)
     if(unget_token_count) {
         if(unget_token_count > 1) {
             // token storage is full
-            return 1;
+            return E_LEX;
         } else {
-            second_token = *t;
+            unget_tokens[0] = *t;
             unget_token_count++;
         }
     } else {
-        last_token = *t;
+        unget_tokens[1] = *t;
         unget_token_count++;
     }
 
-    return 0;
+    return E_OK;
 }
 
 int get_next_token(token_t *t)
@@ -249,9 +256,9 @@ int get_next_token(token_t *t)
     if(unget_token_count) {
 
         if(unget_token_count == 2) {
-            *t = second_token;
+            *t = unget_tokens[0];
         } else {
-            *t = last_token;
+            *t = unget_tokens[1];
         }
         unget_token_count--;
         return E_OK;

@@ -41,30 +41,30 @@ typedef struct {
 /**
  * Assigns source file to global variable.
  *
- * @param FILE Pointer to source file.
+ * @param source_file Pointer to source file to be read from.
  */
 void initialise_file_ptr(FILE *source_file);
 
 /**
  * Closes file assigned *fptr.
  *
- * @param FILE Pointer to input stream.
- * @return 0 on success, otherwise return errno.
+ * @param p Pointer to input stream.
+ * @return E_OK on success, otherwise E_LEX.
  */
 int close_file(FILE *p);
 
 /**
  * Main function of scanner, which gets the next token from *fptr.
  *
- * @param token_t Pointer to token to be assigned type (and value).
- * @return 0 (E_OK) if tokenization is successful, otherwise 1 (E_LEX) scanner error.
+ * @param[out] t Pointer to token to be assigned type (and value).
+ * @return E_OK if tokenization is successful, otherwise E_LEX or E_INT (malloc err).
  */
 int get_next_token(token_t *t);
 
 /**
- * Saves a token pointer for later use.
+ * Saves up to two tokens for later use.
  *
- * @param token_t Pointer token to be saved.
- * @return 0 on success, otherwise return 1.
+ * @param[out] t Pointer to token to be saved.
+ * @return E_OK on success, otherwise return E_LEX.
  */
 int unget_token(token_t *t);
