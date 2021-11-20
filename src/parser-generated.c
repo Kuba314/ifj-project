@@ -24,536 +24,965 @@ static void *alloc_tokens(size_t n_tokens)
 }
 size_t parser_get_table_index(nterm_type_t nterm, term_type_t term)
 {
-    return ((nterm << 6) + term) % 496;
+    return ((nterm << 6) + term) % 1186;
 }
 const char *nterm_to_readable(nterm_type_t nterm)
 {
     switch(nterm) {
-    case NT_EXPRESSION_LIST:
-        return "<expression-list>";
-    case NT_DECLARATION:
-        return "<declaration>";
-    case NT_STATEMENT_LIST:
-        return "<statement-list>";
-    case NT_GLOBAL_STATEMENT_LIST:
-        return "<global-statement-list>";
-    case NT_FUNC_TYPE_LIST2:
-        return "<func-type-list2>";
-    case NT_STATEMENT:
-        return "<statement>";
-    case NT_RET_EXPRESSION_LIST:
-        return "<ret-expression-list>";
-    case NT_IDENTIFIER_LIST_WITH_TYPES:
-        return "<identifier-list-with-types>";
     case NT_IDENTIFIER_LIST_WITH_TYPES2:
         return "<identifier-list-with-types2>";
-    case NT_TYPE_LIST2:
-        return "<type-list2>";
-    case NT_ASSIGNMENT:
-        return "<assignment>";
-    case NT_GLOBAL_STATEMENT:
-        return "<global-statement>";
-    case NT_REPEAT_UNTIL:
-        return "<repeat-until>";
-    case NT_WHILE_LOOP:
-        return "<while-loop>";
-    case NT_FUNC_TYPE_LIST:
-        return "<func-type-list>";
-    case NT_FUNC_DECL:
-        return "<func-decl>";
-    case NT_FUNC_CALL:
-        return "<func-call>";
-    case NT_EXPRESSION_LIST2:
-        return "<expression-list2>";
-    case NT_FUN_EXPRESSION_LIST2:
-        return "<fun-expression-list2>";
-    case NT_FUNC_DEF:
-        return "<func-def>";
-    case NT_IDENTIFIER_LIST:
-        return "<identifier-list>";
-    case NT_RET_EXPRESSION_LIST2:
-        return "<ret-expression-list2>";
-    case NT_IDENTIFIER_WITH_TYPE:
-        return "<identifier-with-type>";
-    case NT_PROGRAM:
-        return "<program>";
-    case NT_IDENTIFIER_LIST2:
-        return "<identifier-list2>";
     case NT_FOR_LOOP:
         return "<for-loop>";
+    case NT_OPTIONAL_FOR_STEP:
+        return "<optional-for-step>";
+    case NT_EXPRESSION:
+        return "<expression>";
+    case NT_TYPE_LIST:
+        return "<type-list>";
+    case NT_FUNC_DECL:
+        return "<func-decl>";
+    case NT_GLOBAL_STATEMENT_LIST:
+        return "<global-statement-list>";
+    case NT_ASSIGNMENT:
+        return "<assignment>";
+    case NT_DECLARATION:
+        return "<declaration>";
+    case NT_REPEAT_UNTIL:
+        return "<repeat-until>";
+    case NT_IDENTIFIER_LIST2:
+        return "<identifier-list2>";
+    case NT_IDENTIFIER_WITH_TYPE:
+        return "<identifier-with-type>";
+    case NT_WHILE_LOOP:
+        return "<while-loop>";
     case NT_OPTIONAL_FUN_EXPRESSION_LIST:
         return "<optional-fun-expression-list>";
     case NT_RETURN_STATEMENT:
         return "<return-statement>";
-    case NT_OPTIONAL_FOR_STEP:
-        return "<optional-for-step>";
-    case NT_TYPE_LIST:
-        return "<type-list>";
+    case NT_UNOP:
+        return "<unop>";
     case NT_COND_STATEMENT:
         return "<cond-statement>";
+    case NT_TERM:
+        return "<term>";
+    case NT_TYPE_LIST2:
+        return "<type-list2>";
+    case NT_EXPRESSION_LIST:
+        return "<expression-list>";
+    case NT_GLOBAL_STATEMENT:
+        return "<global-statement>";
+    case NT_STATEMENT:
+        return "<statement>";
+    case NT_EXPRESSION_LIST2:
+        return "<expression-list2>";
+    case NT_PROGRAM:
+        return "<program>";
+    case NT_OPT_BINOP:
+        return "<opt-binop>";
+    case NT_IDENTIFIER_LIST:
+        return "<identifier-list>";
+    case NT_FUNC_DEF:
+        return "<func-def>";
+    case NT_FUNC_TYPE_LIST2:
+        return "<func-type-list2>";
+    case NT_RET_EXPRESSION_LIST2:
+        return "<ret-expression-list2>";
+    case NT_STATEMENT_LIST2:
+        return "<statement-list2>";
+    case NT_BINOP:
+        return "<binop>";
     case NT_DECL_OPTIONAL_ASSIGNMENT:
         return "<decl-optional-assignment>";
+    case NT_STATEMENT_LIST:
+        return "<statement-list>";
+    case NT_IDENTIFIER_LIST_WITH_TYPES:
+        return "<identifier-list-with-types>";
+    case NT_FUN_EXPRESSION_LIST2:
+        return "<fun-expression-list2>";
+    case NT_RET_EXPRESSION_LIST:
+        return "<ret-expression-list>";
+    case NT_FUNC_CALL:
+        return "<func-call>";
     case NT_COND_OPT_ELSEIF:
         return "<cond-opt-elseif>";
+    case NT_FUNC_TYPE_LIST:
+        return "<func-type-list>";
     }
     return "<unknown-nterm>";
 }
 const char *term_to_readable(term_type_t term)
 {
     switch(term) {
+    case T_DOUBLE_DOT:
+        return "..";
+    case T_INTEGER:
+        return "<integer>";
+    case T_LOCAL:
+        return "local";
+    case T_EQUALS:
+        return "=";
+    case T_FOR:
+        return "for";
+    case T_NUMBER:
+        return "<number>";
+    case T_ASTERISK:
+        return "*";
+    case T_LTE:
+        return "<=";
+    case T_REQUIRE:
+        return "require";
+    case T_AND:
+        return "and";
+    case T_STRING:
+        return "<string>";
+    case T_EXPRESSION:
+        return "<expression>";
+    case T_NOT:
+        return "not";
+    case T_SLASH:
+        return "/";
+    case T_BOOL:
+        return "<bool>";
+    case T_NIL:
+        return "nil";
+    case T_FUNCTION:
+        return "function";
+    case T_RPAREN:
+        return ")";
+    case T_IF:
+        return "if";
+    case T_HASH:
+        return "#";
+    case T_ELSEIF:
+        return "elseif";
+    case T_MINUS:
+        return "-";
     case T_RETURN:
         return "return";
     case T_IDENTIFIER:
         return "<identifier>";
-    case T_COMMA:
-        return ",";
-    case T_THEN:
-        return "then";
-    case T_LT:
-        return "<";
-    case T_NIL:
-        return "nil";
-    case T_GLOBAL:
-        return "global";
-    case T_LPAREN:
-        return "(";
-    case T_UNTIL:
-        return "until";
-    case T_NUMBER:
-        return "<number>";
-    case T_WHILE:
-        return "while";
-    case T_EXPRESSION:
-        return "<expression>";
-    case T_ELSE:
-        return "else";
-    case T_DO:
-        return "do";
-    case T_COLON:
-        return ":";
-    case T_ELSEIF:
-        return "elseif";
-    case T_END:
-        return "end";
-    case T_TILDE_EQUALS:
-        return "~=";
-    case T_PLUS:
-        return "+";
-    case T_LOCAL:
-        return "local";
-    case T_SLASH:
-        return "/";
-    case T_BREAK:
-        return "break";
-    case T_IF:
-        return "if";
-    case T_STRING:
-        return "<string>";
-    case T_MINUS:
-        return "-";
-    case T_HASH:
-        return "#";
     case T_TYPE:
         return "<type>";
-    case T_FOR:
-        return "for";
-    case T_BOOL:
-        return "<bool>";
-    case T_GTE:
-        return ">=";
-    case T_FUNCTION:
-        return "function";
-    case T_LTE:
-        return "<=";
-    case T_DOUBLE_SLASH:
-        return "//";
-    case T_REQUIRE:
-        return "require";
-    case T_DOUBLE_EQUALS:
-        return "==";
-    case T_DOUBLE_DOT:
-        return "..";
-    case T_ASTERISK:
-        return "*";
-    case T_CARET:
-        return "^";
-    case T_REPEAT:
-        return "repeat";
+    case T_UNTIL:
+        return "until";
+    case T_WHILE:
+        return "while";
+    case T_END:
+        return "end";
     case T_EOF:
         return "$";
-    case T_EQUALS:
-        return "=";
-    case T_PERCENT:
-        return "%";
-    case T_INTEGER:
-        return "<integer>";
+    case T_COMMA:
+        return ",";
     case T_GT:
         return ">";
-    case T_RPAREN:
-        return ")";
+    case T_CARET:
+        return "^";
+    case T_DOUBLE_SLASH:
+        return "//";
+    case T_GLOBAL:
+        return "global";
+    case T_PERCENT:
+        return "%";
+    case T_DO:
+        return "do";
+    case T_OR:
+        return "or";
+    case T_THEN:
+        return "then";
+    case T_REPEAT:
+        return "repeat";
+    case T_DOUBLE_EQUALS:
+        return "==";
+    case T_BREAK:
+        return "break";
+    case T_GTE:
+        return ">=";
+    case T_ELSE:
+        return "else";
+    case T_LT:
+        return "<";
+    case T_TILDE_EQUALS:
+        return "~=";
+    case T_COLON:
+        return ":";
+    case T_PLUS:
+        return "+";
+    case T_LPAREN:
+        return "(";
     }
     return "<unknown-term>";
 }
 int parser_init()
 {
-    mempool.data = calloc(139, sizeof(nut_type_t));
+    mempool.data = calloc(296, sizeof(nut_type_t));
     if(mempool.data == NULL) {
         return E_INT;
     }
-    mempool.size = 139 * sizeof(nut_type_t);
+    mempool.size = 296 * sizeof(nut_type_t);
 
-    size_t rule_count = 496;
+    size_t rule_count = 1186;
     table = calloc(1, sizeof(parser_table_t) + rule_count * sizeof(exp_list_t));
     if(table == NULL) {
         return E_INT;
     }
 
     table->bucket_count = rule_count;
-    table->data[17] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[17].data[0].term = T_REQUIRE;
-    table->data[17].data[1].term = T_STRING;
-    table->data[17].data[2].is_nterm = true;
-    table->data[17].data[2].nterm = NT_GLOBAL_STATEMENT_LIST;
+    table->data[294] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[294].data[0].term = T_REQUIRE;
+    table->data[294].data[1].term = T_STRING;
+    table->data[294].data[2].is_nterm = true;
+    table->data[294].data[2].nterm = NT_GLOBAL_STATEMENT_LIST;
+    table->data[417] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[417].data[0].is_nterm = true;
+    table->data[417].data[0].nterm = NT_GLOBAL_STATEMENT;
+    table->data[417].data[1].is_nterm = true;
+    table->data[417].data[1].nterm = NT_GLOBAL_STATEMENT_LIST;
+    table->data[407] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[407].data[0].is_nterm = true;
+    table->data[407].data[0].nterm = NT_GLOBAL_STATEMENT;
+    table->data[407].data[1].is_nterm = true;
+    table->data[407].data[1].nterm = NT_GLOBAL_STATEMENT_LIST;
+    table->data[400] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[400].data[0].is_nterm = true;
+    table->data[400].data[0].nterm = NT_GLOBAL_STATEMENT;
+    table->data[400].data[1].is_nterm = true;
+    table->data[400].data[1].nterm = NT_GLOBAL_STATEMENT_LIST;
+    table->data[412] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[127] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[127].data[0].is_nterm = true;
+    table->data[127].data[0].nterm = NT_FUNC_DECL;
+    table->data[110] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[110].data[0].is_nterm = true;
+    table->data[110].data[0].nterm = NT_FUNC_DEF;
+    table->data[117] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[117].data[0].is_nterm = true;
+    table->data[117].data[0].nterm = NT_FUNC_CALL;
+    table->data[353] = (exp_list_t){ .valid = true, .size = 8, .data = alloc_tokens(8) };
+    table->data[353].data[0].term = T_GLOBAL;
+    table->data[353].data[1].term = T_IDENTIFIER;
+    table->data[353].data[2].term = T_COLON;
+    table->data[353].data[3].term = T_FUNCTION;
+    table->data[353].data[4].term = T_LPAREN;
+    table->data[353].data[5].is_nterm = true;
+    table->data[353].data[5].nterm = NT_TYPE_LIST;
+    table->data[353].data[6].term = T_RPAREN;
+    table->data[353].data[7].is_nterm = true;
+    table->data[353].data[7].nterm = NT_FUNC_TYPE_LIST;
+    table->data[280] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[280].data[0].term = T_TYPE;
+    table->data[280].data[1].is_nterm = true;
+    table->data[280].data[1].nterm = NT_TYPE_LIST2;
+    table->data[273] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[284] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[1181] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[1181].data[0].term = T_COMMA;
+    table->data[1181].data[1].term = T_TYPE;
+    table->data[1181].data[2].is_nterm = true;
+    table->data[1181].data[2].nterm = NT_TYPE_LIST2;
+    table->data[1169] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[1180] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[494] = (exp_list_t){ .valid = true, .size = 8, .data = alloc_tokens(8) };
+    table->data[494].data[0].term = T_FUNCTION;
+    table->data[494].data[1].term = T_IDENTIFIER;
+    table->data[494].data[2].term = T_LPAREN;
+    table->data[494].data[3].is_nterm = true;
+    table->data[494].data[3].nterm = NT_IDENTIFIER_LIST_WITH_TYPES;
+    table->data[494].data[4].term = T_RPAREN;
+    table->data[494].data[5].is_nterm = true;
+    table->data[494].data[5].nterm = NT_FUNC_TYPE_LIST;
+    table->data[494].data[6].is_nterm = true;
+    table->data[494].data[6].nterm = NT_STATEMENT_LIST;
+    table->data[494].data[7].term = T_END;
+    table->data[949] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[949].data[0].is_nterm = true;
+    table->data[949].data[0].nterm = NT_IDENTIFIER_WITH_TYPE;
+    table->data[949].data[1].is_nterm = true;
+    table->data[949].data[1].nterm = NT_IDENTIFIER_LIST_WITH_TYPES2;
+    table->data[943] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[954] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[29] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[29].data[0].term = T_COMMA;
+    table->data[29].data[1].is_nterm = true;
+    table->data[29].data[1].nterm = NT_IDENTIFIER_WITH_TYPE;
+    table->data[29].data[2].is_nterm = true;
+    table->data[29].data[2].nterm = NT_IDENTIFIER_LIST_WITH_TYPES2;
+    table->data[17] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[28] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[105] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[105].data[0].term = T_COLON;
+    table->data[105].data[1].term = T_TYPE;
+    table->data[105].data[2].is_nterm = true;
+    table->data[105].data[2].nterm = NT_FUNC_TYPE_LIST2;
+    table->data[82] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[64] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[62] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[100] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[98] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[87] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[93] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[83] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[88] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[86] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[76] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[78] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[571] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[571].data[0].term = T_COMMA;
+    table->data[571].data[1].term = T_TYPE;
+    table->data[571].data[2].is_nterm = true;
+    table->data[571].data[2].nterm = NT_FUNC_TYPE_LIST2;
+    table->data[564] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[546] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[544] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[582] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[580] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[569] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[575] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[565] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[570] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[568] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[558] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[560] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[884] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[884].data[0].is_nterm = true;
+    table->data[884].data[0].nterm = NT_STATEMENT;
+    table->data[884].data[1].is_nterm = true;
+    table->data[884].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[866] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[866].data[0].is_nterm = true;
+    table->data[866].data[0].nterm = NT_STATEMENT;
+    table->data[866].data[1].is_nterm = true;
+    table->data[866].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[864] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[864].data[0].is_nterm = true;
+    table->data[864].data[0].nterm = NT_STATEMENT;
+    table->data[864].data[1].is_nterm = true;
+    table->data[864].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[902] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[902].data[0].is_nterm = true;
+    table->data[902].data[0].nterm = NT_STATEMENT;
+    table->data[902].data[1].is_nterm = true;
+    table->data[902].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[900] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[900].data[0].is_nterm = true;
+    table->data[900].data[0].nterm = NT_STATEMENT;
+    table->data[900].data[1].is_nterm = true;
+    table->data[900].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[885] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[885].data[0].is_nterm = true;
+    table->data[885].data[0].nterm = NT_STATEMENT;
+    table->data[885].data[1].is_nterm = true;
+    table->data[885].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[888] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[888].data[0].is_nterm = true;
+    table->data[888].data[0].nterm = NT_STATEMENT;
+    table->data[888].data[1].is_nterm = true;
+    table->data[888].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[880] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[880].data[0].is_nterm = true;
+    table->data[880].data[0].nterm = NT_STATEMENT;
+    table->data[880].data[1].is_nterm = true;
+    table->data[880].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[882] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[904] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[887] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[889] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[890] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[692] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[692].data[0].is_nterm = true;
+    table->data[692].data[0].nterm = NT_STATEMENT;
+    table->data[692].data[1].is_nterm = true;
+    table->data[692].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[674] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[674].data[0].is_nterm = true;
+    table->data[674].data[0].nterm = NT_STATEMENT;
+    table->data[674].data[1].is_nterm = true;
+    table->data[674].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[672] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[672].data[0].is_nterm = true;
+    table->data[672].data[0].nterm = NT_STATEMENT;
+    table->data[672].data[1].is_nterm = true;
+    table->data[672].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[710] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[710].data[0].is_nterm = true;
+    table->data[710].data[0].nterm = NT_STATEMENT;
+    table->data[710].data[1].is_nterm = true;
+    table->data[710].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[708] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[708].data[0].is_nterm = true;
+    table->data[708].data[0].nterm = NT_STATEMENT;
+    table->data[708].data[1].is_nterm = true;
+    table->data[708].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[693] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[693].data[0].is_nterm = true;
+    table->data[693].data[0].nterm = NT_STATEMENT;
+    table->data[693].data[1].is_nterm = true;
+    table->data[693].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[696] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[696].data[0].is_nterm = true;
+    table->data[696].data[0].nterm = NT_STATEMENT;
+    table->data[696].data[1].is_nterm = true;
+    table->data[696].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[688] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[688].data[0].is_nterm = true;
+    table->data[688].data[0].nterm = NT_STATEMENT;
+    table->data[688].data[1].is_nterm = true;
+    table->data[688].data[1].nterm = NT_STATEMENT_LIST2;
+    table->data[695] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[712] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[697] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[690] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[698] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[176] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[176].data[0].is_nterm = true;
+    table->data[176].data[0].nterm = NT_COND_STATEMENT;
+    table->data[184] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[184].data[0].is_nterm = true;
+    table->data[184].data[0].nterm = NT_WHILE_LOOP;
+    table->data[162] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[162].data[0].is_nterm = true;
+    table->data[162].data[0].nterm = NT_FOR_LOOP;
+    table->data[196] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[196].data[0].is_nterm = true;
+    table->data[196].data[0].nterm = NT_REPEAT_UNTIL;
+    table->data[160] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[160].data[0].is_nterm = true;
+    table->data[160].data[0].nterm = NT_DECLARATION;
+    table->data[181] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[181].data[0].is_nterm = true;
+    table->data[181].data[0].nterm = NT_ASSIGNMENT;
+    table->data[180] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[180].data[0].is_nterm = true;
+    table->data[180].data[0].nterm = NT_RETURN_STATEMENT;
+    table->data[198] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[198].data[0].term = T_BREAK;
+    table->data[1042] = (exp_list_t){ .valid = true, .size = 5, .data = alloc_tokens(5) };
+    table->data[1042].data[0].term = T_IF;
+    table->data[1042].data[1].is_nterm = true;
+    table->data[1042].data[1].nterm = NT_EXPRESSION;
+    table->data[1042].data[2].term = T_THEN;
+    table->data[1042].data[3].is_nterm = true;
+    table->data[1042].data[3].nterm = NT_STATEMENT_LIST;
+    table->data[1042].data[4].is_nterm = true;
+    table->data[1042].data[4].nterm = NT_COND_OPT_ELSEIF;
+    table->data[16] = (exp_list_t){ .valid = true, .size = 5, .data = alloc_tokens(5) };
+    table->data[16].data[0].term = T_ELSEIF;
+    table->data[16].data[1].is_nterm = true;
+    table->data[16].data[1].nterm = NT_EXPRESSION;
+    table->data[16].data[2].term = T_THEN;
+    table->data[16].data[3].is_nterm = true;
+    table->data[16].data[3].nterm = NT_STATEMENT_LIST;
+    table->data[16].data[4].is_nterm = true;
+    table->data[16].data[4].nterm = NT_COND_OPT_ELSEIF;
+    table->data[38] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[38].data[0].term = T_ELSE;
+    table->data[38].data[1].is_nterm = true;
+    table->data[38].data[1].nterm = NT_STATEMENT_LIST;
+    table->data[38].data[2].term = T_END;
+    table->data[23] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[23].data[0].term = T_END;
+    table->data[794] = (exp_list_t){ .valid = true, .size = 5, .data = alloc_tokens(5) };
+    table->data[794].data[0].term = T_WHILE;
+    table->data[794].data[1].is_nterm = true;
+    table->data[794].data[1].nterm = NT_EXPRESSION;
+    table->data[794].data[2].term = T_DO;
+    table->data[794].data[3].is_nterm = true;
+    table->data[794].data[3].nterm = NT_STATEMENT_LIST;
+    table->data[794].data[4].term = T_END;
+    table->data[68] = (exp_list_t){ .valid = true, .size = 10, .data = alloc_tokens(10) };
+    table->data[68].data[0].term = T_FOR;
+    table->data[68].data[1].term = T_IDENTIFIER;
+    table->data[68].data[2].term = T_EQUALS;
+    table->data[68].data[3].is_nterm = true;
+    table->data[68].data[3].nterm = NT_EXPRESSION;
+    table->data[68].data[4].term = T_COMMA;
+    table->data[68].data[5].is_nterm = true;
+    table->data[68].data[5].nterm = NT_EXPRESSION;
+    table->data[68].data[6].is_nterm = true;
+    table->data[68].data[6].nterm = NT_OPTIONAL_FOR_STEP;
+    table->data[68].data[7].term = T_DO;
+    table->data[68].data[8].is_nterm = true;
+    table->data[68].data[8].nterm = NT_STATEMENT_LIST;
+    table->data[68].data[9].term = T_END;
+    table->data[157] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[157].data[0].term = T_COMMA;
+    table->data[157].data[1].is_nterm = true;
+    table->data[157].data[1].nterm = NT_EXPRESSION;
+    table->data[163] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[156] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[614] = (exp_list_t){ .valid = true, .size = 4, .data = alloc_tokens(4) };
+    table->data[614].data[0].term = T_REPEAT;
+    table->data[614].data[1].is_nterm = true;
+    table->data[614].data[1].nterm = NT_STATEMENT_LIST;
+    table->data[614].data[2].term = T_UNTIL;
+    table->data[614].data[3].is_nterm = true;
+    table->data[614].data[3].nterm = NT_EXPRESSION;
+    table->data[514] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[514].data[0].term = T_LOCAL;
+    table->data[514].data[1].is_nterm = true;
+    table->data[514].data[1].nterm = NT_IDENTIFIER_WITH_TYPE;
+    table->data[514].data[2].is_nterm = true;
+    table->data[514].data[2].nterm = NT_DECL_OPTIONAL_ASSIGNMENT;
+    table->data[801] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[801].data[0].term = T_EQUALS;
+    table->data[801].data[1].is_nterm = true;
+    table->data[801].data[1].nterm = NT_EXPRESSION;
+    table->data[820] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[840] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[825] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[838] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[800] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[836] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[821] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[818] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[823] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[824] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[802] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[816] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[826] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[727] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[727].data[0].term = T_IDENTIFIER;
+    table->data[727].data[1].term = T_COLON;
+    table->data[727].data[2].term = T_TYPE;
+    table->data[471] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[471].data[0].is_nterm = true;
+    table->data[471].data[0].nterm = NT_IDENTIFIER_LIST;
+    table->data[471].data[1].term = T_EQUALS;
+    table->data[471].data[2].is_nterm = true;
+    table->data[471].data[2].nterm = NT_EXPRESSION_LIST;
+    table->data[437] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[437].data[0].term = T_IDENTIFIER;
+    table->data[437].data[1].is_nterm = true;
+    table->data[437].data[1].nterm = NT_IDENTIFIER_LIST2;
+    table->data[669] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[669].data[0].term = T_COMMA;
+    table->data[669].data[1].term = T_IDENTIFIER;
+    table->data[669].data[2].is_nterm = true;
+    table->data[669].data[2].nterm = NT_IDENTIFIER_LIST2;
+    table->data[643] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[668] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[42] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[42].data[0].is_nterm = true;
+    table->data[42].data[0].nterm = NT_EXPRESSION;
+    table->data[42].data[1].is_nterm = true;
+    table->data[42].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[49] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[49].data[0].is_nterm = true;
+    table->data[49].data[0].nterm = NT_EXPRESSION;
+    table->data[49].data[1].is_nterm = true;
+    table->data[49].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[51] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[51].data[0].is_nterm = true;
+    table->data[51].data[0].nterm = NT_EXPRESSION;
+    table->data[51].data[1].is_nterm = true;
+    table->data[51].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[77] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[77].data[0].is_nterm = true;
+    table->data[77].data[0].nterm = NT_EXPRESSION;
+    table->data[77].data[1].is_nterm = true;
+    table->data[77].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[53] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[53].data[0].is_nterm = true;
+    table->data[53].data[0].nterm = NT_EXPRESSION;
+    table->data[53].data[1].is_nterm = true;
+    table->data[53].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[35] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[35].data[0].is_nterm = true;
+    table->data[35].data[0].nterm = NT_EXPRESSION;
+    table->data[35].data[1].is_nterm = true;
+    table->data[35].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[31] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[31].data[0].is_nterm = true;
+    table->data[31].data[0].nterm = NT_EXPRESSION;
+    table->data[31].data[1].is_nterm = true;
+    table->data[31].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[40] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[40].data[0].is_nterm = true;
+    table->data[40].data[0].nterm = NT_EXPRESSION;
+    table->data[40].data[1].is_nterm = true;
+    table->data[40].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[45] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[45].data[0].is_nterm = true;
+    table->data[45].data[0].nterm = NT_EXPRESSION;
+    table->data[45].data[1].is_nterm = true;
+    table->data[45].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[44] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[44].data[0].is_nterm = true;
+    table->data[44].data[0].nterm = NT_EXPRESSION;
+    table->data[44].data[1].is_nterm = true;
+    table->data[44].data[1].nterm = NT_EXPRESSION_LIST2;
+    table->data[251] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[251].data[0].term = T_COMMA;
+    table->data[251].data[1].is_nterm = true;
+    table->data[251].data[1].nterm = NT_EXPRESSION;
+    table->data[251].data[2].is_nterm = true;
+    table->data[251].data[2].nterm = NT_EXPRESSION_LIST2;
+    table->data[244] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[264] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[249] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[262] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[224] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[260] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[245] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[242] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[247] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[248] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[226] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[240] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[250] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[918] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[918].data[0].term = T_RETURN;
+    table->data[918].data[1].is_nterm = true;
+    table->data[918].data[1].nterm = NT_RET_EXPRESSION_LIST;
+    table->data[1066] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1066].data[0].is_nterm = true;
+    table->data[1066].data[0].nterm = NT_EXPRESSION;
+    table->data[1066].data[1].is_nterm = true;
+    table->data[1066].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1073] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1073].data[0].is_nterm = true;
+    table->data[1073].data[0].nterm = NT_EXPRESSION;
+    table->data[1073].data[1].is_nterm = true;
+    table->data[1073].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1075] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1075].data[0].is_nterm = true;
+    table->data[1075].data[0].nterm = NT_EXPRESSION;
+    table->data[1075].data[1].is_nterm = true;
+    table->data[1075].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1101] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1101].data[0].is_nterm = true;
+    table->data[1101].data[0].nterm = NT_EXPRESSION;
+    table->data[1101].data[1].is_nterm = true;
+    table->data[1101].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1077] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1077].data[0].is_nterm = true;
+    table->data[1077].data[0].nterm = NT_EXPRESSION;
+    table->data[1077].data[1].is_nterm = true;
+    table->data[1077].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1059] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1059].data[0].is_nterm = true;
+    table->data[1059].data[0].nterm = NT_EXPRESSION;
+    table->data[1059].data[1].is_nterm = true;
+    table->data[1059].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1055] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1055].data[0].is_nterm = true;
+    table->data[1055].data[0].nterm = NT_EXPRESSION;
+    table->data[1055].data[1].is_nterm = true;
+    table->data[1055].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1064] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1064].data[0].is_nterm = true;
+    table->data[1064].data[0].nterm = NT_EXPRESSION;
+    table->data[1064].data[1].is_nterm = true;
+    table->data[1064].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1069] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1069].data[0].is_nterm = true;
+    table->data[1069].data[0].nterm = NT_EXPRESSION;
+    table->data[1069].data[1].is_nterm = true;
+    table->data[1069].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[1068] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[1068].data[0].is_nterm = true;
+    table->data[1068].data[0].nterm = NT_EXPRESSION;
+    table->data[1068].data[1].is_nterm = true;
+    table->data[1068].data[1].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[635] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[635].data[0].term = T_COMMA;
+    table->data[635].data[1].is_nterm = true;
+    table->data[635].data[1].nterm = NT_EXPRESSION;
+    table->data[635].data[2].is_nterm = true;
+    table->data[635].data[2].nterm = NT_RET_EXPRESSION_LIST2;
+    table->data[628] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[648] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[633] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[646] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[608] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[644] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[629] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[626] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[631] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[632] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[610] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[624] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[634] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[1141] = (exp_list_t){ .valid = true, .size = 4, .data = alloc_tokens(4) };
+    table->data[1141].data[0].term = T_IDENTIFIER;
+    table->data[1141].data[1].term = T_LPAREN;
+    table->data[1141].data[2].is_nterm = true;
+    table->data[1141].data[2].nterm = NT_OPTIONAL_FUN_EXPRESSION_LIST;
+    table->data[1141].data[3].term = T_RPAREN;
+    table->data[844] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[844].data[0].is_nterm = true;
+    table->data[844].data[0].nterm = NT_EXPRESSION;
+    table->data[844].data[1].is_nterm = true;
+    table->data[844].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[851] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[851].data[0].is_nterm = true;
+    table->data[851].data[0].nterm = NT_EXPRESSION;
+    table->data[851].data[1].is_nterm = true;
+    table->data[851].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[853] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[853].data[0].is_nterm = true;
+    table->data[853].data[0].nterm = NT_EXPRESSION;
+    table->data[853].data[1].is_nterm = true;
+    table->data[853].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[879] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[879].data[0].is_nterm = true;
+    table->data[879].data[0].nterm = NT_EXPRESSION;
+    table->data[879].data[1].is_nterm = true;
+    table->data[879].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[855] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[855].data[0].is_nterm = true;
+    table->data[855].data[0].nterm = NT_EXPRESSION;
+    table->data[855].data[1].is_nterm = true;
+    table->data[855].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[837] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[837].data[0].is_nterm = true;
+    table->data[837].data[0].nterm = NT_EXPRESSION;
+    table->data[837].data[1].is_nterm = true;
+    table->data[837].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[833] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[833].data[0].is_nterm = true;
+    table->data[833].data[0].nterm = NT_EXPRESSION;
+    table->data[833].data[1].is_nterm = true;
+    table->data[833].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[842] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[842].data[0].is_nterm = true;
+    table->data[842].data[0].nterm = NT_EXPRESSION;
+    table->data[842].data[1].is_nterm = true;
+    table->data[842].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[847] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[847].data[0].is_nterm = true;
+    table->data[847].data[0].nterm = NT_EXPRESSION;
+    table->data[847].data[1].is_nterm = true;
+    table->data[847].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[846] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[846].data[0].is_nterm = true;
+    table->data[846].data[0].nterm = NT_EXPRESSION;
+    table->data[846].data[1].is_nterm = true;
+    table->data[846].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[849] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[860] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[1019] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[1019].data[0].term = T_COMMA;
+    table->data[1019].data[1].is_nterm = true;
+    table->data[1019].data[1].nterm = NT_EXPRESSION;
+    table->data[1019].data[2].is_nterm = true;
+    table->data[1019].data[2].nterm = NT_FUN_EXPRESSION_LIST2;
+    table->data[1007] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[1018] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[197] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[197].data[0].is_nterm = true;
+    table->data[197].data[0].nterm = NT_TERM;
+    table->data[197].data[1].is_nterm = true;
+    table->data[197].data[1].nterm = NT_OPT_BINOP;
     table->data[193] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
     table->data[193].data[0].is_nterm = true;
-    table->data[193].data[0].nterm = NT_GLOBAL_STATEMENT;
+    table->data[193].data[0].nterm = NT_TERM;
     table->data[193].data[1].is_nterm = true;
-    table->data[193].data[1].nterm = NT_GLOBAL_STATEMENT_LIST;
-    table->data[198] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[198].data[0].is_nterm = true;
-    table->data[198].data[0].nterm = NT_GLOBAL_STATEMENT;
-    table->data[198].data[1].is_nterm = true;
-    table->data[198].data[1].nterm = NT_GLOBAL_STATEMENT_LIST;
-    table->data[222] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[222].data[0].is_nterm = true;
-    table->data[222].data[0].nterm = NT_GLOBAL_STATEMENT;
-    table->data[222].data[1].is_nterm = true;
-    table->data[222].data[1].nterm = NT_GLOBAL_STATEMENT_LIST;
-    table->data[231] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[214] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[214].data[0].is_nterm = true;
-    table->data[214].data[0].nterm = NT_FUNC_DECL;
-    table->data[238] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[238].data[0].is_nterm = true;
-    table->data[238].data[0].nterm = NT_FUNC_DEF;
-    table->data[209] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[209].data[0].is_nterm = true;
-    table->data[209].data[0].nterm = NT_FUNC_CALL;
-    table->data[470] = (exp_list_t){ .valid = true, .size = 8, .data = alloc_tokens(8) };
-    table->data[470].data[0].term = T_GLOBAL;
-    table->data[470].data[1].term = T_IDENTIFIER;
-    table->data[470].data[2].term = T_COLON;
-    table->data[470].data[3].term = T_FUNCTION;
-    table->data[470].data[4].term = T_LPAREN;
-    table->data[470].data[5].is_nterm = true;
-    table->data[470].data[5].nterm = NT_TYPE_LIST;
-    table->data[470].data[6].term = T_RPAREN;
-    table->data[470].data[7].is_nterm = true;
-    table->data[470].data[7].nterm = NT_FUNC_TYPE_LIST;
-    table->data[394] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[394].data[0].term = T_TYPE;
-    table->data[394].data[1].is_nterm = true;
-    table->data[394].data[1].nterm = NT_TYPE_LIST2;
-    table->data[412] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[407] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[82] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[82].data[0].term = T_COMMA;
-    table->data[82].data[1].term = T_TYPE;
-    table->data[82].data[2].is_nterm = true;
-    table->data[82].data[2].nterm = NT_TYPE_LIST2;
-    table->data[124] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[119] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[254] = (exp_list_t){ .valid = true, .size = 8, .data = alloc_tokens(8) };
-    table->data[254].data[0].term = T_FUNCTION;
-    table->data[254].data[1].term = T_IDENTIFIER;
-    table->data[254].data[2].term = T_LPAREN;
-    table->data[254].data[3].is_nterm = true;
-    table->data[254].data[3].nterm = NT_IDENTIFIER_LIST_WITH_TYPES;
-    table->data[254].data[4].term = T_RPAREN;
-    table->data[254].data[5].is_nterm = true;
-    table->data[254].data[5].nterm = NT_FUNC_TYPE_LIST;
-    table->data[254].data[6].is_nterm = true;
-    table->data[254].data[6].nterm = NT_STATEMENT_LIST;
-    table->data[254].data[7].term = T_END;
-    table->data[449] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[449].data[0].is_nterm = true;
-    table->data[449].data[0].nterm = NT_IDENTIFIER_WITH_TYPE;
-    table->data[449].data[1].is_nterm = true;
-    table->data[449].data[1].nterm = NT_IDENTIFIER_LIST_WITH_TYPES2;
-    table->data[492] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[487] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[18] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[18].data[0].term = T_COMMA;
-    table->data[18].data[1].is_nterm = true;
-    table->data[18].data[1].nterm = NT_IDENTIFIER_WITH_TYPE;
-    table->data[18].data[2].is_nterm = true;
-    table->data[18].data[2].nterm = NT_IDENTIFIER_LIST_WITH_TYPES2;
-    table->data[60] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[55] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[414] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[414].data[0].term = T_COLON;
-    table->data[414].data[1].term = T_TYPE;
-    table->data[414].data[2].is_nterm = true;
-    table->data[414].data[2].nterm = NT_FUNC_TYPE_LIST2;
-    table->data[401] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[410] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[419] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[421] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[422] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[439] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[438] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[416] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[427] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[406] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[400] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[430] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[258] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[258].data[0].term = T_COMMA;
-    table->data[258].data[1].term = T_TYPE;
-    table->data[258].data[2].is_nterm = true;
-    table->data[258].data[2].nterm = NT_FUNC_TYPE_LIST2;
-    table->data[257] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[266] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[275] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[277] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[278] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[295] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[294] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[272] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[283] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[262] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[256] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[286] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[129] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[129].data[0].is_nterm = true;
-    table->data[129].data[0].nterm = NT_STATEMENT;
-    table->data[129].data[1].is_nterm = true;
-    table->data[129].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[138] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[138].data[0].is_nterm = true;
-    table->data[138].data[0].nterm = NT_STATEMENT;
-    table->data[138].data[1].is_nterm = true;
-    table->data[138].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[147] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[147].data[0].is_nterm = true;
-    table->data[147].data[0].nterm = NT_STATEMENT;
-    table->data[147].data[1].is_nterm = true;
-    table->data[147].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[149] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[149].data[0].is_nterm = true;
-    table->data[149].data[0].nterm = NT_STATEMENT;
-    table->data[149].data[1].is_nterm = true;
-    table->data[149].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[150] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[150].data[0].is_nterm = true;
-    table->data[150].data[0].nterm = NT_STATEMENT;
-    table->data[150].data[1].is_nterm = true;
-    table->data[150].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[166] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[166].data[0].is_nterm = true;
-    table->data[166].data[0].nterm = NT_STATEMENT;
-    table->data[166].data[1].is_nterm = true;
-    table->data[166].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[155] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[155].data[0].is_nterm = true;
-    table->data[155].data[0].nterm = NT_STATEMENT;
-    table->data[155].data[1].is_nterm = true;
-    table->data[155].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[128] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[128].data[0].is_nterm = true;
-    table->data[128].data[0].nterm = NT_STATEMENT;
-    table->data[128].data[1].is_nterm = true;
-    table->data[128].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[143] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[140] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[144] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[136] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[167] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[342] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[342].data[0].is_nterm = true;
-    table->data[342].data[0].nterm = NT_COND_STATEMENT;
-    table->data[330] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[330].data[0].is_nterm = true;
-    table->data[330].data[0].nterm = NT_WHILE_LOOP;
-    table->data[347] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[347].data[0].is_nterm = true;
-    table->data[347].data[0].nterm = NT_FOR_LOOP;
-    table->data[358] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[358].data[0].is_nterm = true;
-    table->data[358].data[0].nterm = NT_REPEAT_UNTIL;
-    table->data[339] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[339].data[0].is_nterm = true;
-    table->data[339].data[0].nterm = NT_DECLARATION;
-    table->data[321] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[321].data[0].is_nterm = true;
-    table->data[321].data[0].nterm = NT_ASSIGNMENT;
-    table->data[320] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[320].data[0].is_nterm = true;
-    table->data[320].data[0].nterm = NT_RETURN_STATEMENT;
-    table->data[341] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[341].data[0].term = T_BREAK;
-    table->data[454] = (exp_list_t){ .valid = true, .size = 5, .data = alloc_tokens(5) };
-    table->data[454].data[0].term = T_IF;
-    table->data[454].data[1].term = T_EXPRESSION;
-    table->data[454].data[2].term = T_THEN;
-    table->data[454].data[3].is_nterm = true;
-    table->data[454].data[3].nterm = NT_STATEMENT_LIST;
-    table->data[454].data[4].is_nterm = true;
-    table->data[454].data[4].nterm = NT_COND_OPT_ELSEIF;
-    table->data[79] = (exp_list_t){ .valid = true, .size = 4, .data = alloc_tokens(4) };
-    table->data[79].data[0].term = T_ELSEIF;
-    table->data[79].data[1].term = T_EXPRESSION;
-    table->data[79].data[2].term = T_THEN;
-    table->data[79].data[3].is_nterm = true;
-    table->data[79].data[3].nterm = NT_COND_OPT_ELSEIF;
-    table->data[76] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[76].data[0].term = T_ELSE;
-    table->data[76].data[1].is_nterm = true;
-    table->data[76].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[76].data[2].term = T_END;
-    table->data[80] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
-    table->data[80].data[0].term = T_END;
-    table->data[346] = (exp_list_t){ .valid = true, .size = 5, .data = alloc_tokens(5) };
-    table->data[346].data[0].term = T_WHILE;
-    table->data[346].data[1].term = T_EXPRESSION;
-    table->data[346].data[2].term = T_DO;
-    table->data[346].data[3].is_nterm = true;
-    table->data[346].data[3].nterm = NT_STATEMENT_LIST;
-    table->data[346].data[4].term = T_END;
-    table->data[139] = (exp_list_t){ .valid = true, .size = 10, .data = alloc_tokens(10) };
-    table->data[139].data[0].term = T_FOR;
-    table->data[139].data[1].term = T_IDENTIFIER;
-    table->data[139].data[2].term = T_EQUALS;
-    table->data[139].data[3].term = T_EXPRESSION;
-    table->data[139].data[4].term = T_COMMA;
-    table->data[139].data[5].term = T_EXPRESSION;
-    table->data[139].data[6].is_nterm = true;
-    table->data[139].data[6].nterm = NT_OPTIONAL_FOR_STEP;
-    table->data[139].data[7].term = T_DO;
-    table->data[139].data[8].is_nterm = true;
-    table->data[139].data[8].nterm = NT_STATEMENT_LIST;
-    table->data[139].data[9].term = T_END;
-    table->data[306] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[306].data[0].term = T_COMMA;
-    table->data[306].data[1].term = T_EXPRESSION;
-    table->data[317] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[343] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[310] = (exp_list_t){ .valid = true, .size = 4, .data = alloc_tokens(4) };
-    table->data[310].data[0].term = T_REPEAT;
-    table->data[310].data[1].is_nterm = true;
-    table->data[310].data[1].nterm = NT_STATEMENT_LIST;
-    table->data[310].data[2].term = T_UNTIL;
-    table->data[310].data[3].term = T_EXPRESSION;
-    table->data[83] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[83].data[0].term = T_LOCAL;
-    table->data[83].data[1].is_nterm = true;
-    table->data[83].data[1].nterm = NT_IDENTIFIER_WITH_TYPE;
-    table->data[83].data[2].is_nterm = true;
-    table->data[83].data[2].nterm = NT_DECL_OPTIONAL_ASSIGNMENT;
-    table->data[40] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[40].data[0].term = T_EQUALS;
-    table->data[40].data[1].term = T_EXPRESSION;
-    table->data[15] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[1] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[10] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[19] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[21] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[22] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[12] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[16] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[38] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[27] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[0] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[8] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[39] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[417] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[417].data[0].term = T_IDENTIFIER;
-    table->data[417].data[1].term = T_COLON;
-    table->data[417].data[2].term = T_TYPE;
-    table->data[145] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[145].data[0].is_nterm = true;
-    table->data[145].data[0].nterm = NT_IDENTIFIER_LIST;
-    table->data[145].data[1].term = T_EQUALS;
-    table->data[145].data[2].is_nterm = true;
-    table->data[145].data[2].nterm = NT_EXPRESSION_LIST;
-    table->data[289] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[289].data[0].term = T_IDENTIFIER;
-    table->data[289].data[1].is_nterm = true;
-    table->data[289].data[1].nterm = NT_IDENTIFIER_LIST2;
-    table->data[50] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[50].data[0].term = T_COMMA;
-    table->data[50].data[1].term = T_IDENTIFIER;
-    table->data[50].data[2].is_nterm = true;
-    table->data[50].data[2].nterm = NT_IDENTIFIER_LIST2;
-    table->data[88] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[87] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[11] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[11].data[0].term = T_EXPRESSION;
-    table->data[11].data[1].is_nterm = true;
-    table->data[11].data[1].nterm = NT_EXPRESSION_LIST2;
-    table->data[98] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[98].data[0].term = T_COMMA;
-    table->data[98].data[1].term = T_EXPRESSION;
-    table->data[98].data[2].is_nterm = true;
-    table->data[98].data[2].nterm = NT_EXPRESSION_LIST2;
-    table->data[111] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[97] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[106] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[115] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[117] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[118] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[108] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[112] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[134] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[123] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[96] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[104] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[135] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[240] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[240].data[0].term = T_RETURN;
-    table->data[240].data[1].is_nterm = true;
-    table->data[240].data[1].nterm = NT_RET_EXPRESSION_LIST;
+    table->data[193].data[1].nterm = NT_OPT_BINOP;
+    table->data[239] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[239].data[0].is_nterm = true;
+    table->data[239].data[0].nterm = NT_TERM;
+    table->data[239].data[1].is_nterm = true;
+    table->data[239].data[1].nterm = NT_OPT_BINOP;
+    table->data[207] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[207].data[0].is_nterm = true;
+    table->data[207].data[0].nterm = NT_TERM;
+    table->data[207].data[1].is_nterm = true;
+    table->data[207].data[1].nterm = NT_OPT_BINOP;
+    table->data[215] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[215].data[0].is_nterm = true;
+    table->data[215].data[0].nterm = NT_TERM;
+    table->data[215].data[1].is_nterm = true;
+    table->data[215].data[1].nterm = NT_OPT_BINOP;
+    table->data[202] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[202].data[0].is_nterm = true;
+    table->data[202].data[0].nterm = NT_TERM;
+    table->data[202].data[1].is_nterm = true;
+    table->data[202].data[1].nterm = NT_OPT_BINOP;
+    table->data[206] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[206].data[0].is_nterm = true;
+    table->data[206].data[0].nterm = NT_TERM;
+    table->data[206].data[1].is_nterm = true;
+    table->data[206].data[1].nterm = NT_OPT_BINOP;
+    table->data[204] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[204].data[0].is_nterm = true;
+    table->data[204].data[0].nterm = NT_UNOP;
+    table->data[204].data[1].is_nterm = true;
+    table->data[204].data[1].nterm = NT_TERM;
+    table->data[204].data[2].is_nterm = true;
+    table->data[204].data[2].nterm = NT_OPT_BINOP;
+    table->data[211] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[211].data[0].is_nterm = true;
+    table->data[211].data[0].nterm = NT_UNOP;
+    table->data[211].data[1].is_nterm = true;
+    table->data[211].data[1].nterm = NT_TERM;
+    table->data[211].data[2].is_nterm = true;
+    table->data[211].data[2].nterm = NT_OPT_BINOP;
+    table->data[213] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[213].data[0].is_nterm = true;
+    table->data[213].data[0].nterm = NT_UNOP;
+    table->data[213].data[1].is_nterm = true;
+    table->data[213].data[1].nterm = NT_TERM;
+    table->data[213].data[2].is_nterm = true;
+    table->data[213].data[2].nterm = NT_OPT_BINOP;
     table->data[395] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[395].data[0].term = T_EXPRESSION;
+    table->data[395].data[0].is_nterm = true;
+    table->data[395].data[0].nterm = NT_BINOP;
     table->data[395].data[1].is_nterm = true;
-    table->data[395].data[1].nterm = NT_RET_EXPRESSION_LIST2;
-    table->data[354] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[354].data[0].term = T_COMMA;
-    table->data[354].data[1].term = T_EXPRESSION;
-    table->data[354].data[2].is_nterm = true;
-    table->data[354].data[2].nterm = NT_RET_EXPRESSION_LIST2;
-    table->data[367] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[353] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[362] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[371] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[373] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[374] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[364] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[368] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[390] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[395].data[1].nterm = NT_EXPRESSION;
+    table->data[363] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[363].data[0].is_nterm = true;
+    table->data[363].data[0].nterm = NT_BINOP;
+    table->data[363].data[1].is_nterm = true;
+    table->data[363].data[1].nterm = NT_EXPRESSION;
+    table->data[389] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[389].data[0].is_nterm = true;
+    table->data[389].data[0].nterm = NT_BINOP;
+    table->data[389].data[1].is_nterm = true;
+    table->data[389].data[1].nterm = NT_EXPRESSION;
+    table->data[381] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[381].data[0].is_nterm = true;
+    table->data[381].data[0].nterm = NT_BINOP;
+    table->data[381].data[1].is_nterm = true;
+    table->data[381].data[1].nterm = NT_EXPRESSION;
+    table->data[371] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[371].data[0].is_nterm = true;
+    table->data[371].data[0].nterm = NT_BINOP;
+    table->data[371].data[1].is_nterm = true;
+    table->data[371].data[1].nterm = NT_EXPRESSION;
+    table->data[350] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[350].data[0].is_nterm = true;
+    table->data[350].data[0].nterm = NT_BINOP;
+    table->data[350].data[1].is_nterm = true;
+    table->data[350].data[1].nterm = NT_EXPRESSION;
+    table->data[386] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[386].data[0].is_nterm = true;
+    table->data[386].data[0].nterm = NT_BINOP;
+    table->data[386].data[1].is_nterm = true;
+    table->data[386].data[1].nterm = NT_EXPRESSION;
+    table->data[393] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[393].data[0].is_nterm = true;
+    table->data[393].data[0].nterm = NT_BINOP;
+    table->data[393].data[1].is_nterm = true;
+    table->data[393].data[1].nterm = NT_EXPRESSION;
+    table->data[359] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[359].data[0].is_nterm = true;
+    table->data[359].data[0].nterm = NT_BINOP;
+    table->data[359].data[1].is_nterm = true;
+    table->data[359].data[1].nterm = NT_EXPRESSION;
+    table->data[380] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[380].data[0].is_nterm = true;
+    table->data[380].data[0].nterm = NT_BINOP;
+    table->data[380].data[1].is_nterm = true;
+    table->data[380].data[1].nterm = NT_EXPRESSION;
+    table->data[396] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[396].data[0].is_nterm = true;
+    table->data[396].data[0].nterm = NT_BINOP;
+    table->data[396].data[1].is_nterm = true;
+    table->data[396].data[1].nterm = NT_EXPRESSION;
+    table->data[357] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[357].data[0].is_nterm = true;
+    table->data[357].data[0].nterm = NT_BINOP;
+    table->data[357].data[1].is_nterm = true;
+    table->data[357].data[1].nterm = NT_EXPRESSION;
+    table->data[394] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[394].data[0].is_nterm = true;
+    table->data[394].data[0].nterm = NT_BINOP;
+    table->data[394].data[1].is_nterm = true;
+    table->data[394].data[1].nterm = NT_EXPRESSION;
+    table->data[382] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[382].data[0].is_nterm = true;
+    table->data[382].data[0].nterm = NT_BINOP;
+    table->data[382].data[1].is_nterm = true;
+    table->data[382].data[1].nterm = NT_EXPRESSION;
+    table->data[356] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[356].data[0].is_nterm = true;
+    table->data[356].data[0].nterm = NT_BINOP;
+    table->data[356].data[1].is_nterm = true;
+    table->data[356].data[1].nterm = NT_EXPRESSION;
+    table->data[384] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[384].data[0].is_nterm = true;
+    table->data[384].data[0].nterm = NT_BINOP;
+    table->data[384].data[1].is_nterm = true;
+    table->data[384].data[1].nterm = NT_EXPRESSION;
+    table->data[391] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
+    table->data[391].data[0].is_nterm = true;
+    table->data[391].data[0].nterm = NT_BINOP;
+    table->data[391].data[1].is_nterm = true;
+    table->data[391].data[1].nterm = NT_EXPRESSION;
+    table->data[372] = (exp_list_t){ .valid = true, .size = 0 };
     table->data[379] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[392] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[377] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[390] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[373] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[385] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[368] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[387] = (exp_list_t){ .valid = true, .size = 0 };
     table->data[352] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[360] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[391] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[33] = (exp_list_t){ .valid = true, .size = 4, .data = alloc_tokens(4) };
-    table->data[33].data[0].term = T_IDENTIFIER;
-    table->data[33].data[1].term = T_LPAREN;
-    table->data[33].data[2].is_nterm = true;
-    table->data[33].data[2].nterm = NT_OPTIONAL_FUN_EXPRESSION_LIST;
-    table->data[33].data[3].term = T_RPAREN;
-    table->data[187] = (exp_list_t){ .valid = true, .size = 2, .data = alloc_tokens(2) };
-    table->data[187].data[0].term = T_EXPRESSION;
-    table->data[187].data[1].is_nterm = true;
-    table->data[187].data[1].nterm = NT_FUN_EXPRESSION_LIST2;
-    table->data[220] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[215] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[162] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
-    table->data[162].data[0].term = T_COMMA;
-    table->data[162].data[1].term = T_EXPRESSION;
-    table->data[162].data[2].is_nterm = true;
-    table->data[162].data[2].nterm = NT_FUN_EXPRESSION_LIST2;
-    table->data[204] = (exp_list_t){ .valid = true, .size = 0 };
-    table->data[199] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[388] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[367] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[370] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[375] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[376] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[354] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[378] = (exp_list_t){ .valid = true, .size = 0 };
+    table->data[780] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[780].data[0].term = T_PLUS;
+    table->data[755] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[755].data[0].term = T_MINUS;
+    table->data[740] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[740].data[0].term = T_ASTERISK;
+    table->data[747] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[747].data[0].term = T_SLASH;
+    table->data[768] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[768].data[0].term = T_PERCENT;
+    table->data[765] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[765].data[0].term = T_CARET;
+    table->data[766] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[766].data[0].term = T_DOUBLE_SLASH;
+    table->data[734] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[734].data[0].term = T_DOUBLE_DOT;
+    table->data[779] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[779].data[0].term = T_COLON;
+    table->data[777] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[777].data[0].term = T_LT;
+    table->data[764] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[764].data[0].term = T_GT;
+    table->data[741] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[741].data[0].term = T_LTE;
+    table->data[775] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[775].data[0].term = T_GTE;
+    table->data[773] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[773].data[0].term = T_DOUBLE_EQUALS;
+    table->data[778] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[778].data[0].term = T_TILDE_EQUALS;
+    table->data[743] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[743].data[0].term = T_AND;
+    table->data[770] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[770].data[0].term = T_OR;
+    table->data[981] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[981].data[0].term = T_MINUS;
+    table->data[979] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[979].data[0].term = T_HASH;
+    table->data[972] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[972].data[0].term = T_NOT;
+    table->data[1135] = (exp_list_t){ .valid = true, .size = 3, .data = alloc_tokens(3) };
+    table->data[1135].data[0].term = T_LPAREN;
+    table->data[1135].data[1].is_nterm = true;
+    table->data[1135].data[1].nterm = NT_EXPRESSION;
+    table->data[1135].data[2].term = T_RPAREN;
+    table->data[1111] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[1111].data[0].term = T_IDENTIFIER;
+    table->data[1093] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[1093].data[0].term = T_NUMBER;
+    table->data[1089] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[1089].data[0].term = T_INTEGER;
+    table->data[1098] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[1098].data[0].term = T_STRING;
+    table->data[1102] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[1102].data[0].term = T_BOOL;
+    table->data[1103] = (exp_list_t){ .valid = true, .size = 1, .data = alloc_tokens(1) };
+    table->data[1103].data[0].term = T_NIL;
     return E_OK;
 }
 void parser_free()
