@@ -169,16 +169,6 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write('    exp_list_t data[];\n')
         f.write('} parser_table_t;\n\n')
 
-        f.write('typedef struct {\n')
-        f.write('    term_type_t token_type;\n')
-        f.write('    union {\n')
-        f.write('        string_t string;\n')
-        f.write('        type_t type;\n')
-        f.write('        int64_t integer;\n')
-        f.write('        double number;\n')
-        f.write('    };\n')
-        f.write('} token_t;\n\n')
-
         f.write('size_t parser_get_table_index(nterm_type_t nterm, term_type_t term);\n')
         f.write('const char *nterm_to_readable(nterm_type_t nterm);\n')
         f.write('const char *term_to_readable(term_type_t term);\n')
