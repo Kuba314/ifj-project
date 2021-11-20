@@ -1,22 +1,24 @@
 from typing import Set, Dict, List
 
+def is_term(t):
+    return t != '<expression>' and t in terminals
+
 # https://github.com/PranayT17/Finding-FIRST-and-FOLLOW-of-given-grammar/blob/master/first_follow.py
 def get_first(seq: List[str]) -> Set[str]:
 
     if len(seq) == 1:
         token = seq[0]
 
-        if token in terminals:
+        if is_term(token):
             return {token}
-
-        if token in non_terminals:
+        elif token in non_terminals:
             first = set()
             for exp in rules[token]:
                 first |= get_first(exp)
             return first
-
-        print(f'error: token isn\'t term and neither is an nterm: "{token}"')
-        return set()
+        else:
+            print(f'error: token isn\'t term and neither is an nterm: "{token}"')
+            return set()
 
     # we now know that seq is longer than 1 token
     tmp_first = get_first([seq[0]])
@@ -25,7 +27,7 @@ def get_first(seq: List[str]) -> Set[str]:
     while EPS in tmp_first:
 
         seq = seq[1:]
-        if len(seq) == 1 and seq[0] in terminals:
+        if len(seq) == 1 and is_term(seq[0]):
             first |= {seq[0]}
             break
         if not seq:
@@ -117,11 +119,13 @@ rules: Dict[str, List[List[str]]] = {
     '<func-type-list>':                 [[':', '<type>', '<func-type-list2>'], [EPS]],
     '<func-type-list2>':                [[',', '<type>', '<func-type-list2>'], [EPS]],
 
-    '<statement-list>': [['<statement>', '<statement-list>'], [EPS]],
-    '<statement>':      [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<assignment>'], ['<return-statement>'], ['break']],
+    # had to add a continuation even if it's not needed here. parser had to know when to allocate body ast node
+    '<statement-list>':     [['<statement>', '<statement-list2>'], [EPS]],
+    '<statement-list2>':    [['<statement>', '<statement-list2>'], [EPS]],
+    '<statement>':          [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<assignment>'], ['<return-statement>'], ['break']],
 
     '<cond-statement>':     [['if', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>']],
-    '<cond-opt-elseif>':    [['elseif', '<expression>', 'then', '<cond-opt-elseif>'], ['else', '<statement-list>', 'end'], ['end']],
+    '<cond-opt-elseif>':    [['elseif', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>'], ['else', '<statement-list>', 'end'], ['end']],
     '<while-loop>':         [['while', '<expression>', 'do', '<statement-list>', 'end']],
     '<for-loop>':           [['for', '<identifier>', '=', '<expression>', ',', '<expression>', '<optional-for-step>', 'do', '<statement-list>', 'end']],
     '<optional-for-step>':  [[',', '<expression>'], [EPS]],
@@ -144,20 +148,30 @@ rules: Dict[str, List[List[str]]] = {
     '<func-call>': [['<identifier>', '(', '<optional-fun-expression-list>', ')']],
     '<optional-fun-expression-list>':   [['<expression>', '<fun-expression-list2>'], [EPS]],
     '<fun-expression-list2>':           [[',', '<expression>', '<fun-expression-list2>'], [EPS]],
+
+    '<expression>': [['<term>', '<opt-binop>'], ['<unop>', '<term>', '<opt-binop>']],
+    '<opt-binop>':  [['<binop>', '<expression>'], [EPS]],
+    '<binop>':      [['+'], ['-'], ['*'], ['/'], ['%'], ['^'], ['//'], ['..'], [':'], ['<'], ['>'], ['<='], ['>='], ['=='], ['~='], ['and'], ['or']],
+    '<unop>':       [['-'], ['#'], ['not']],
+    '<term>':       [['(', '<expression>', ')'], ['<identifier>'], ['<number>'], ['<integer>'], ['<string>'], ['<bool>'], ['nil']],
+
 }
 
 # construct terminals and non_terminals lists from rules
-additional_terms: Set[str] = {
-    '(', ')', '+', '-', '*', '/', '%', '^', '//', '=', '~=', '..', '#', ':', '<', '>', '<=', '>=', '==', ',',
-    '<number>', '<integer>', '<string>', '<bool>', 'nil'
-}
+# additional_terms: Set[str] = {
+#     '(', ')', '+', '-', '*', '/', '%', '^', '//', '=', '~=', '..', '#', ':', '<', '>', '<=', '>=', '==', ',',
+#     '<identifier>', '<number>', '<integer>', '<string>', '<bool>', 'nil'
+# }
+# additional_nterms: Set[str] = {
+#     '<expression>'
+# }
 terminals: List[str] = list({
     token
     for exps in rules.values()
     for exp in exps
     for token in exp
     if token not in rules
-}.union(additional_terms))
+}) + ['<expression>']
 non_terminals: List[str] = list(rules.keys())
 
 
@@ -171,6 +185,8 @@ for nt, exps in rules.items():
         for first_token in get_first(exp):
             if first_token == EPS:
                 got_eps = True
+            # elif first_token == '<expression>':
+            #     continue
             table[nt][first_token] = exp
 
     if got_eps:
@@ -184,3 +200,12 @@ for expd in table.values():
         del expd[EPS]
 terminals.remove(EPS)
 terminals.append('$')
+
+print(table['<expression-list>'])
+print(table['<expression>']['<integer>'])
+print(table['<term>']['<integer>'])
+
+# print(terminals)
+# print(non_terminals)
+# print(list(table.keys()))
+# print(set(sum([list(expd.keys()) for expd in table.values()], [])))
