@@ -158,20 +158,13 @@ rules: Dict[str, List[List[str]]] = {
 }
 
 # construct terminals and non_terminals lists from rules
-# additional_terms: Set[str] = {
-#     '(', ')', '+', '-', '*', '/', '%', '^', '//', '=', '~=', '..', '#', ':', '<', '>', '<=', '>=', '==', ',',
-#     '<identifier>', '<number>', '<integer>', '<string>', '<bool>', 'nil'
-# }
-# additional_nterms: Set[str] = {
-#     '<expression>'
-# }
 terminals: List[str] = list({
     token
     for exps in rules.values()
     for exp in exps
     for token in exp
     if token not in rules
-}) + ['<expression>']
+})# + ['<expression>']
 non_terminals: List[str] = list(rules.keys())
 
 
@@ -200,12 +193,3 @@ for expd in table.values():
         del expd[EPS]
 terminals.remove(EPS)
 terminals.append('$')
-
-print(table['<expression-list>'])
-print(table['<expression>']['<integer>'])
-print(table['<term>']['<integer>'])
-
-# print(terminals)
-# print(non_terminals)
-# print(list(table.keys()))
-# print(set(sum([list(expd.keys()) for expd in table.values()], [])))
