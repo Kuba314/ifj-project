@@ -68,11 +68,16 @@ static ast_node_t *alloc_break_node()
 // mock function for testing
 int precedence_parse(ast_node_t **node)
 {
+    static int ix = 0;
+    int consume_n[] = {3, 1, 3, 1};
     token_t t;
-    get_next_token(&t);
 
-    get_next_token(&t);
-    printf("prec %s\n", term_to_readable(t.token_type));
+    int n = consume_n[ix++];
+    for(int i = 0; i < n; i++) {
+        get_next_token(&t);
+        printf("prec %s\n", term_to_readable(t.token_type));
+    }
+
     *node = calloc(1, sizeof(ast_node_t));
     return E_OK;
 }
