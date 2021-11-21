@@ -3,7 +3,7 @@ CXX = g++
 CFLAGS = -std=c11 -Werror
 LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
-CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ --coverage
+CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ --coverage -g
 TARGETS = all_tests
 LIB_OBJECTS = \
 	src/utils/dynstring.o \
