@@ -1152,55 +1152,53 @@ TEST_F(ScannerInput, ComplexProgram3)
 TEST_F(ScannerInput, UngetToken)
 {
     UseFile("tests/scanner_test_files/numbers.tl");
-    token_t token1;
-    token_t token2;
-    token_t token3;
+    token_t token;
 
-    ASSERT_EQ(get_next_token(&token1), E_OK);
-    EXPECT_EQ(token1.integer, (int64_t) 123);
-    EXPECT_EQ(token1.token_type, T_INTEGER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.integer, (int64_t) 123);
+    EXPECT_EQ(token.token_type, T_INTEGER);
 
-    ASSERT_EQ(unget_token(&token1), 0);
+    ASSERT_EQ(unget_token(), 0);
 
-    ASSERT_EQ(get_next_token(&token1), E_OK);
-    EXPECT_EQ(token1.integer, (int64_t) 123);
-    EXPECT_EQ(token1.token_type, T_INTEGER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.integer, (int64_t) 123);
+    EXPECT_EQ(token.token_type, T_INTEGER);
 
-    ASSERT_EQ(get_next_token(&token1), E_OK);
-    EXPECT_EQ(token1.number, (double) 3.14);
-    EXPECT_EQ(token1.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3.14);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 
-    ASSERT_EQ(get_next_token(&token2), E_OK);
-    EXPECT_EQ(token2.number, (double) 3.1);
-    EXPECT_EQ(token2.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3.1);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 
-    ASSERT_EQ(unget_token(&token2), 0);
+    ASSERT_EQ(unget_token(), 0);
 
-    ASSERT_EQ(unget_token(&token1), 0);
+    ASSERT_EQ(unget_token(), 0);
 
-    ASSERT_EQ(get_next_token(&token1), E_OK);
-    EXPECT_EQ(token1.number, (double) 3.14);
-    EXPECT_EQ(token1.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3.14);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 
-    ASSERT_EQ(get_next_token(&token2), E_OK);
-    EXPECT_EQ(token2.number, (double) 3.1);
-    EXPECT_EQ(token2.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3.1);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 
-    ASSERT_EQ(get_next_token(&token3), E_OK);
-    EXPECT_EQ(token3.number, (double) 3123.0000001);
-    EXPECT_EQ(token3.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3123.0000001);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 
-    ASSERT_EQ(unget_token(&token2), 0);
+    ASSERT_EQ(unget_token(), 0);
 
-    ASSERT_EQ(unget_token(&token1), 0);
+    ASSERT_EQ(unget_token(), 0);
 
-    ASSERT_EQ(unget_token(&token3), 1);
+    ASSERT_EQ(unget_token(), 1);
 
-    ASSERT_EQ(get_next_token(&token1), E_OK);
-    EXPECT_EQ(token1.number, (double) 3.14);
-    EXPECT_EQ(token1.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3.1);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 
-    ASSERT_EQ(get_next_token(&token2), E_OK);
-    EXPECT_EQ(token2.number, (double) 3.1);
-    EXPECT_EQ(token2.token_type, T_NUMBER);
+    ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.number, (double) 3123.0000001);
+    EXPECT_EQ(token.token_type, T_NUMBER);
 }

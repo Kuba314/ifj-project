@@ -22,8 +22,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define TOKEN_BUF_LENGTH 2
-
 typedef enum
 {
     SCANNER_STATE_START,              ///> Starting state, where scanner returns after every token
@@ -58,8 +56,8 @@ typedef enum
 } scanner_state;
 
 static FILE *fptr;
-static token_t unget_tokens[TOKEN_BUF_LENGTH];
-static short unsigned unget_token_count = 0;
+static token_t last_tokens[TOKEN_BUF_LENGTH];
+static short unsigned last_token_ix = 0;
 
 /**
  * Identifies keyword.
@@ -230,24 +228,8 @@ int close_file(void)
     return E_OK;
 }
 
-int unget_token(token_t *t)
+static int _get_next_token(token_t *t)
 {
-    // Check if last_token is already being used.
-    if(unget_token_count == TOKEN_BUF_LENGTH) {
-        return E_LEX;
-    }
-    unget_tokens[unget_token_count++] = *t;
-    return E_OK;
-}
-
-int get_next_token(token_t *t)
-{
-    // Returns a saved token in case it was set.
-    if(unget_token_count > 0) {
-        *t = unget_tokens[--unget_token_count];
-        return E_OK;
-    }
-
     // Checks if the file to be read is present
     if(!fptr) {
         return E_INT;
@@ -762,4 +744,28 @@ int get_next_token(token_t *t)
             }
         }
     }
+}
+int get_next_token(token_t *t)
+{
+    if(last_token_ix) {
+        *t = last_tokens[--last_token_ix];
+        return E_OK;
+    }
+
+    int ret = _get_next_token(t);
+    for(int i = TOKEN_BUF_LENGTH - 1; i > 0; i--) {
+        last_tokens[i] = last_tokens[i - 1];
+    }
+    last_tokens[0] = *t;
+    return ret;
+}
+
+int unget_token()
+{
+    // can't unget any more tokens, buffer is full
+    if(last_token_ix >= TOKEN_BUF_LENGTH) {
+        return E_LEX;
+    }
+    last_token_ix++;
+    return E_OK;
 }
