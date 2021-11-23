@@ -12,6 +12,9 @@ LIB_OBJECTS = \
 	src/utils/binary_search_tree.o \
 	src/utils/hashtablebase.o \
 	src/utils/deque.o \
+	src/parser-syn.o \
+	src/parser-generated.o \
+	src/type.o \
 	src/scanner.o \
 	src/symtable.o
 
