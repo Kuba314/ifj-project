@@ -5,14 +5,15 @@ LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
 CPPFLAGS = -Werror -Wall -Wextra -pedantic -Iinclude/ --coverage
 TARGETS = all_tests
-LIB_OBJECTS = src/utils/dynstring.o \
-              src/utils/stack.o \
-              src/utils/search_key.o \
-              src/utils/binary_search_tree.o \
-              src/utils/hashtablebase.o \
-              src/utils/deque.o \
-  	      src/scanner.o \
-	      src/symtable.o
+LIB_OBJECTS = \
+	src/utils/dynstring.o \
+	src/utils/stack.o \
+	src/utils/search_key.o \
+	src/utils/binary_search_tree.o \
+	src/utils/hashtablebase.o \
+	src/utils/deque.o \
+	src/scanner.o \
+	src/symtable.o
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
