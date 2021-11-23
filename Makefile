@@ -22,7 +22,8 @@ LIB_OBJECTS = \
 	src/parser-precedence.o \
 	src/type.o \
 	src/scanner.o \
-	src/symtable.o
+	src/symtable.o \
+	src/semantics.o
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
