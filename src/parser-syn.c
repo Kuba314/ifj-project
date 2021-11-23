@@ -152,6 +152,9 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
         case NT_IDENTIFIER_LIST2:
             node_list_append(root, alloc_id_node(token.string));
             break;
+        case NT_STATEMENT:
+            // ignore, will be handled once we know if we're in assignment or func-call
+            break;
         default:
             error = true;
         }
@@ -373,16 +376,27 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
     // peek at token
     token_t token;
     if(token_gen(&token)) {
-        fprintf(stderr, "error: parser: couldn't read next token while expanding %s",
+        fprintf(stderr, "error: parser: couldn't read next token while expanding %s\n",
                 nterm_to_readable(nterm));
         return E_SYN;
+    }
+
+    // handle func-call special case
+    if(nterm == NT_PAREN_EXP_LIST_OR_ID_LIST2) {
+        token_unget();
+        token_unget();
+        if(token.token_type == T_LPAREN) {
+            return parse(NT_FUNC_CALL, root, depth);
+        } else if(token.token_type == T_COMMA) {
+            return parse(NT_ASSIGNMENT, root, depth);
+        }
     }
 
     // get expansion list from nterm and following token
     exp_list_t exp_list = table->data[parser_get_table_index(nterm, token.token_type)];
     if(!exp_list.valid) {
         // invalid rule
-        fprintf(stderr, "error: parser: invalid rule for %s and %s", nterm_to_readable(nterm),
+        fprintf(stderr, "error: parser: invalid rule for %s and %s\n", nterm_to_readable(nterm),
                 term_to_readable(token.token_type));
         return E_SYN;
     }
@@ -403,7 +417,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
         if(expected.is_nterm) {
             ast_node_t **ref = get_node_ref(root, nterm, depth);
             if(ref == NULL) {
-                fprintf(stderr, "error: parser-int: %s returned a null ref",
+                fprintf(stderr, "error: parser-int: %s returned a null ref\n",
                         nterm_to_readable(nterm));
                 return E_INT;
             }
@@ -415,7 +429,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
             // try to following token with the expected one
             token_gen(&token);
             if(token.token_type != expected.term) {
-                fprintf(stderr, "error: parser: expected \"%s\", but got \"%s\"",
+                fprintf(stderr, "error: parser: expected \"%s\", but got \"%s\"\n",
                         term_to_readable(expected.term), term_to_readable(token.token_type));
                 return E_SYN;
             } else {
@@ -662,8 +676,20 @@ static void free_ast(ast_node_t *root)
     free(root);
 }
 
-int main()
+#ifndef GUI
+int main(int argc, char *argv[])
 {
+    if(argc != 2) {
+        fprintf(stderr, "usage: %s <file.tl>\n", argv[0]);
+        return 1;
+    }
+    FILE *fp = fopen(argv[1], "r");
+    if(fp == NULL) {
+        fprintf(stderr, "error: file \"%s\" doesn't exist\n", argv[1]);
+        return 1;
+    }
+    initialise_file_ptr(fp);
+
     if(parser_init()) {
         fprintf(stderr, "error: couldn't init parser\n");
         return E_INT;
@@ -682,3 +708,4 @@ int main()
     parser_free();
     return E_OK;
 }
+#endif
