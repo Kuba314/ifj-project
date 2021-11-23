@@ -1,9 +1,9 @@
 CC = gcc
 CXX = g++
-CFLAGS = -std=c11
+CFLAGS = -std=c11 -Werror
 LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
-CPPFLAGS = -Werror -Wall -Wextra -pedantic -Iinclude/ --coverage
+CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ --coverage
 TARGETS = all_tests
 LIB_OBJECTS = \
 	src/utils/dynstring.o \
