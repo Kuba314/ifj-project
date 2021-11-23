@@ -15,14 +15,13 @@ class ScannerInput : public ::testing::Test {
   protected:
     virtual void UseFile(const char *filename)
     {
-        f = fopen(filename, "r");
+        FILE *f = fopen(filename, "r");
         initialise_file_ptr(f);
     }
     virtual void TearDown() override
     {
-        close_file(f);
+        close_file();
     }
-    FILE *f;
 };
 
 TEST_F(ScannerInput, NumberScan)
