@@ -1,4 +1,4 @@
-// #include "parser.h"
+#include "parser.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,30 +9,6 @@
 #include "ast.h"
 #include "error.h"
 
-// mock function pair for testing
-static int ix = 0;
-int token_gen(token_t *token)
-{
-    static const term_type_t ttypes[] = {
-        T_REQUIRE, T_STRING, T_FUNCTION, T_IDENTIFIER, T_LPAREN, T_RPAREN, T_IDENTIFIER, T_COMMA,
-        T_IDENTIFIER, T_EQUALS, T_INTEGER, T_COMMA, T_INTEGER,
-        // T_IF, T_NUMBER, T_THEN, T_IDENTIFIER, T_EQUALS, T_STRING, T_ELSEIF, T_NUMBER, T_THEN,
-        // T_IDENTIFIER, T_EQUALS, T_STRING, T_ELSE, T_RETURN, T_STRING, T_END, T_WHILE, T_INTEGER,
-        // T_DO, T_IDENTIFIER, T_EQUALS, T_STRING, T_END, T_REPEAT, T_RETURN, T_STRING, T_UNTIL,
-        // T_BOOL, T_FOR, T_IDENTIFIER, T_EQUALS, T_INTEGER, T_COMMA, T_IDENTIFIER, T_DO, T_BREAK,
-        // T_END,
-        T_END, T_EOF
-    };
-    if((size_t) ix >= sizeof(ttypes) / sizeof(*ttypes)) {
-        return 1;
-    }
-    *token = (token_t){ .token_type = ttypes[ix++] };
-    return 0;
-}
-void token_unget()
-{
-    ix--;
-}
 
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
 {
@@ -42,11 +18,6 @@ static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *nod
     *node_list = node;
     return node_list;
 }
-// static void node_list_prepend(ast_node_list_t *node_list, ast_node_t *node)
-// {
-//     node->next = *node_list;
-//     *node_list = node;
-// }
 static ast_node_t **node_list_tail(ast_node_list_t *node_list)
 {
     while(*node_list) {
@@ -94,12 +65,15 @@ static ast_node_t *alloc_break_node()
     return node;
 }
 
+// mock function for testing
 int precedence_parse(ast_node_t **node)
 {
     token_t t;
-    token_gen(&t);
+    get_next_token(&t);
+
+    get_next_token(&t);
+    printf("prec %s\n", term_to_readable(t.token_type));
     *node = calloc(1, sizeof(ast_node_t));
-    (*node)->node_type = AST_NODE_NIL;
     return E_OK;
 }
 
@@ -375,7 +349,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
 
     // peek at token
     token_t token;
-    if(token_gen(&token)) {
+    if(get_next_token(&token)) {
         fprintf(stderr, "error: parser: couldn't read next token while expanding %s\n",
                 nterm_to_readable(nterm));
         return E_SYN;
@@ -383,8 +357,8 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
 
     // handle func-call special case
     if(nterm == NT_PAREN_EXP_LIST_OR_ID_LIST2) {
-        token_unget();
-        token_unget();
+        unget_token();
+        unget_token();
         if(token.token_type == T_LPAREN) {
             return parse(NT_FUNC_CALL, root, depth);
         } else if(token.token_type == T_COMMA || token.token_type == T_EQUALS) {
@@ -404,7 +378,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
     print(depth, "(%s, %s)", nterm_to_readable(nterm), term_to_readable(token.token_type));
 
     // put token back
-    token_unget(token);
+    unget_token();
 
     alloc_nterm(nterm, root, depth);
 
@@ -427,7 +401,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
             }
         } else {
             // try to following token with the expected one
-            token_gen(&token);
+            get_next_token(&token);
             if(token.token_type != expected.term) {
                 fprintf(stderr, "error: parser: expected \"%s\", but got \"%s\"\n",
                         term_to_readable(expected.term), term_to_readable(token.token_type));
@@ -454,7 +428,7 @@ void print_ast(int depth, ast_node_t *root)
     switch(root->node_type) {
     case AST_NODE_FUNC_DECL:
         print(depth, "func-decl:");
-        print(depth + 1, "name");
+        print(depth + 1, "name:");
         print_ast(depth + 2, root->func_decl.name);
         print(depth + 1, "return_types:");
         print_ast_list(depth + 2, root->func_decl.return_types);
@@ -463,7 +437,7 @@ void print_ast(int depth, ast_node_t *root)
         break;
     case AST_NODE_FUNC_DEF:
         print(depth, "func-def:");
-        print(depth + 1, "name");
+        print(depth + 1, "name:");
         print_ast(depth + 2, root->func_def.name);
         print(depth + 1, "return_types:");
         print_ast_list(depth + 2, root->func_def.return_types);
@@ -473,7 +447,7 @@ void print_ast(int depth, ast_node_t *root)
         break;
     case AST_NODE_FUNC_CALL:
         print(depth, "func-call:");
-        print(depth + 1, "name");
+        print(depth + 1, "name:");
         print_ast(depth + 2, root->func_call.name);
         print(depth + 1, "arguments:");
         print_ast_list(depth + 2, root->func_call.arguments);
@@ -658,10 +632,17 @@ void free_ast(ast_node_t *root)
     case AST_NODE_STRING:
         str_free(&root->string);
         break;
-    case AST_NODE_ID_TYPE_PAIR:
-    case AST_NODE_BREAK:
     case AST_NODE_BINOP:
+        free_ast(root->binop.left);
+        free_ast(root->binop.right);
+        break;
     case AST_NODE_UNOP:
+        free_ast(root->unop.operand);
+        break;
+    case AST_NODE_ID_TYPE_PAIR:
+        str_free(&root->id_type_pair.id);
+        break;
+    case AST_NODE_BREAK:
     case AST_NODE_TYPE:
     case AST_NODE_INTEGER:
     case AST_NODE_NUMBER:
