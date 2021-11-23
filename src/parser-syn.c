@@ -675,37 +675,3 @@ static void free_ast(ast_node_t *root)
     free_ast(root->next);
     free(root);
 }
-
-#ifndef GUI
-int main(int argc, char *argv[])
-{
-    if(argc != 2) {
-        fprintf(stderr, "usage: %s <file.tl>\n", argv[0]);
-        return 1;
-    }
-    FILE *fp = fopen(argv[1], "r");
-    if(fp == NULL) {
-        fprintf(stderr, "error: file \"%s\" doesn't exist\n", argv[1]);
-        return 1;
-    }
-    initialise_file_ptr(fp);
-
-    if(parser_init()) {
-        fprintf(stderr, "error: couldn't init parser\n");
-        return E_INT;
-    }
-
-    ast_node_t *ast = NULL;
-    int err;
-    if((err = parse(NT_PROGRAM, &ast, 0))) {
-        return err;
-    }
-
-    fprintf(stderr, "FINAL AST:\n");
-    print_ast(0, ast);
-
-    free_ast(ast);
-    parser_free();
-    return E_OK;
-}
-#endif
