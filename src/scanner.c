@@ -222,9 +222,9 @@ void initialise_file_ptr(FILE *source_file)
     fptr = source_file;
 }
 
-int close_file(FILE *fp)
+int close_file(void)
 {
-    if(fclose(fp)) {
+    if(fclose(fptr)) {
         return E_INT;
     }
     return E_OK;
