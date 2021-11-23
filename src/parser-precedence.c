@@ -10,6 +10,30 @@
 #include "scanner.h"
 #include "parser.h"
 #include "parser-generated.h"
+#include "semantics.h"
+
+#ifdef DBG
+
+static int dbgseverity = 6;
+
+    #define PRINT(severity, ...)                                                                   \
+        if(severity >= dbgseverity) {                                                              \
+            fprintf(stderr, __VA_ARGS__);                                                          \
+        }
+
+    #define DPRINT(severity, ...)                                                                  \
+        if(severity >= dbgseverity) {                                                              \
+            fprintf(stderr, "<P%d> ", depth);                                                      \
+            fprintf(stderr, __VA_ARGS__);                                                          \
+        }
+
+#else
+
+    #define DPRINT(...)                                                                            \
+        do {                                                                                       \
+        } while(0);
+
+#endif
 
 typedef enum
 {
@@ -108,8 +132,6 @@ typedef struct {
     stack_element_t *array[];
 } element_array_t;
 
-static int depth = 0;
-
 static const rule_t rules[] = {
     [RULE_UNOP] = { check_unop, 2, { check_nonterm, check_unop } },
     [RULE_BINOP] = { check_binop, 3, { check_nonterm, check_binop, check_nonterm } }, // binop rule
@@ -120,32 +142,76 @@ static const rule_t rules[] = {
     [RULE_LITERAL] = { check_literal, 1, { check_literal } }
 };
 
-static void print_element(stack_element_t *e, stack_element_t *sen)
+static void print_element(stack_element_t *e, stack_element_t *sen, int severity)
 {
+#ifdef DBG
+    if(severity < dbgseverity) {
+        return;
+    }
     if(!e) {
         return;
     }
-    printf("Element: ");
+    fprintf(stderr, "Element: ");
     if(e->mark) {
-        printf("<");
+        fprintf(stderr, "<");
     }
 
     if(e == sen) {
-        printf("DOLLAR SENTINEL\n");
+        fprintf(stderr, "DOLLAR SENTINEL\n");
     } else {
         switch(e->type) {
         case FLAG_NONTERM:
-            printf("E\n");
+            fprintf(stderr, "E\n");
             break;
         case FLAG_TERM:
-            printf("%s", term_to_string(e->token.token_type));
+            fprintf(stderr, "%s", term_to_string(e->token.token_type));
             if(e->token.token_type == T_IDENTIFIER) {
-                printf(" id: %s", e->token.string.ptr);
+                fprintf(stderr, " id: %s", e->token.string.ptr);
             }
-            printf("\n");
+            fprintf(stderr, "\n");
             break;
         }
     }
+#else
+    (void) e;
+    (void) sen;
+    (void) severity;
+#endif
+}
+
+static void dbg_print(deque_t *stack, int depth, int severity)
+{
+#ifdef DBG
+    if(severity < dbgseverity) {
+        return;
+    }
+    deque_element_t *e = deque_front_element(stack);
+
+    DPRINT(severity, "Stack: { ");
+    while(e) {
+        stack_element_t *d = (stack_element_t *) e->data;
+        const char *s;
+        switch(d->type) {
+        case FLAG_TERM:
+            s = term_to_string(d->token.token_type);
+            break;
+        case FLAG_NONTERM:
+            s = "E";
+            break;
+        }
+        fprintf(stderr, "  ");
+        if(d->mark) {
+            fprintf(stderr, "<");
+        }
+        fprintf(stderr, "%s", s);
+        e = e->next;
+    }
+    fprintf(stderr, " }\n");
+#else
+    (void) stack;
+    (void) depth;
+    (void) severity;
+#endif
 }
 
 stack_element_t *create_element(token_t *token, stack_element_t *sen)
@@ -155,7 +221,7 @@ stack_element_t *create_element(token_t *token, stack_element_t *sen)
         temp->token = *token;
         temp->type = FLAG_TERM;
         temp->mark = false;
-        print_element(temp, sen);
+        print_element(temp, sen, 1);
     }
     return temp;
 }
@@ -234,31 +300,6 @@ bool is_table_terminal(term_type_t type)
     return false;
 }
 
-static void dbg_print(deque_t *stack, int depth)
-{
-    deque_element_t *e = deque_front_element(stack);
-
-    printf("Stack [P%d]: {\n", depth);
-    while(e) {
-        stack_element_t *d = (stack_element_t *) e->data;
-        const char *s;
-        switch(d->type) {
-        case FLAG_TERM:
-            s = term_to_string(d->token.token_type);
-            break;
-        case FLAG_NONTERM:
-            s = "E";
-            break;
-        }
-        if(d->mark) {
-            printf("  <\n");
-        }
-        printf("  %s\n", s);
-        e = e->next;
-    }
-    printf("}\n");
-}
-
 stack_element_t *parser_top(deque_t *stack)
 {
     deque_element_t *it = deque_front_element(stack);
@@ -273,13 +314,13 @@ stack_element_t *parser_top(deque_t *stack)
     return e;
 }
 
-static void free_stack(adt_stack_t *stack, stack_element_t *sen)
+static void free_stack(adt_stack_t *stack)
 {
     while(!stack_empty(stack)) {
         element_array_t *a = (element_array_t *) stack_pop(stack);
         for(size_t i = 0; i < a->size; ++i) {
             stack_element_t *e = a->array[i];
-            print_element(e, sen);
+            // print_element(e, sen);
             free(e);
         }
         free(a);
@@ -291,7 +332,7 @@ static void free_deque(deque_t *stack, stack_element_t *sen)
 {
     while(!deque_empty(stack)) {
         stack_element_t *e = (stack_element_t *) deque_pop_front(stack);
-        print_element(e, sen);
+        print_element(e, sen, 1);
         free(e);
     }
     deque_free(stack);
@@ -300,7 +341,7 @@ static void free_deque(deque_t *stack, stack_element_t *sen)
 static void free_parser_bottom_up(deque_t *stack, adt_stack_t *right_analysis, stack_element_t *sen)
 {
     free_deque(stack, sen);
-    free_stack(right_analysis, sen);
+    free_stack(right_analysis);
 }
 
 static int push_nonterm(deque_t *stack)
@@ -313,8 +354,9 @@ static int push_nonterm(deque_t *stack)
 }
 
 static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t *output,
-                        stack_element_t *sen)
+                        stack_element_t *sen, int depth)
 {
+    (void) depth;
 
     element_array_t *group =
         calloc(sizeof(element_array_t) + rule->list_size * sizeof(element_array_t *), sizeof(char));
@@ -327,18 +369,18 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
     if(stack_push(output, group) != E_OK) {
         return E_INT;
     }
-    // printf("Exec rule: %d\n", id);
+    DPRINT(1, "Exec rule: %d\n", id);
     for(size_t i = 0; i < rule->list_size; ++i) {
-        // printf("Rule i: %lu\n", i);
-        // dbg_print(stack, 0);
+        DPRINT(1, "Rule i: %lu\n", i);
+        dbg_print(stack, 0, 1);
         stack_element_t *e = deque_front(stack);
         if(!e || e->mark) {
-            fprintf(stderr, "[INTERNAL, PREC_PARSER] Syntax error: sequence underflow.\n");
+            DPRINT(8, "[INTERNAL, PREC_PARSER] Syntax error: sequence underflow.\n");
             return E_SYN;
         }
 
         if(!rule->list[i](e)) {
-            fprintf(stderr, "[INTERNAL, PREC_PARSER] Syntax error: wrong nut. \n");
+            DPRINT(8, "[INTERNAL, PREC_PARSER] Syntax error: wrong nut. \n");
             return E_SYN;
         }
 
@@ -348,9 +390,9 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
     }
 
     stack_element_t *e = deque_front(stack);
-    print_element(e, sen);
+    print_element(e, sen, 1);
     if(!e->mark) {
-        fprintf(stderr, "[INTERNAL, PREC_PARSER] Syntax error: sequence overflow.\n");
+        DPRINT(8, "[INTERNAL, PREC_PARSER] Syntax error: sequence overflow.\n");
         return E_SYN;
     }
     e->mark = false;
@@ -359,7 +401,7 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
         return E_INT;
     }
 
-    printf(" >>> Pushed rule: %d\n", id);
+    DPRINT(3, ">>> Pushed rule: %d\n", id);
 
     return E_OK;
 }
@@ -375,16 +417,16 @@ static int parser_reduce(deque_t *stack, stack_element_t *top, adt_stack_t *outp
     for(size_t i = 0; i < sizeof(rules) / sizeof(rule_t); ++i) {
 
         if(rules[i].condition(top)) {
-            r = execute_rule(i, stack, &rules[i], output, sen);
+            r = execute_rule(i, stack, &rules[i], output, sen, depth);
             executed = true;
             break;
         }
     }
     if(!executed) { // temporary
-        fprintf(stderr, "[INTERNAL, PREC_PARSER] error: no rule\n");
+        DPRINT(8, "[INTERNAL, PREC_PARSER] error: no rule\n");
     }
 
-    // printf("Reduced:\n");
+    // DPRINT("Reduced:\n");
     // dbg_print(stack, depth);
     return r;
 }
@@ -397,10 +439,10 @@ static int prec_get_next_token(token_t *current, int *level)
     }
     if(current->token_type == T_LPAREN) {
         (*level)++;
-        // printf("push (: %d\n", (*level));
+        // DPRINT("push (: %d\n", (*level));
     }
     if(current->token_type == T_RPAREN) {
-        //        printf("pop ): %d\n", (*level));
+        //        DPRINT("pop ): %d\n", (*level));
         (*level)--;
     }
     return E_OK;
@@ -410,72 +452,84 @@ static int parser_shift(deque_t *stack, token_t *current, int *level, int depth,
                         stack_element_t *sen)
 {
     stack_element_t *element = create_element(current, sen);
-    // printf("Pushing to P[%d]: ", depth);
+    // DPRINT("Pushing to P[%d]: ", depth);
     /// print_element(element, sen);
     if(!element || deque_push_front(stack, element) != E_OK) {
         return E_INT;
     }
-    dbg_print(stack, depth);
+    dbg_print(stack, depth, 1);
     return prec_get_next_token(current, level);
 }
 
 static int dbgcount = 0;
 
-static bool check_condition(deque_t *stack)
+static bool check_condition(deque_t *stack, int depth, stack_element_t *sentinel)
 {
+    (void) depth;
     stack_element_t *current_top = deque_front(stack);
-    // printf(" >> CHECK: ");
-    // print_element(atop, sentinel);
-    if(current_top->type == FLAG_NONTERM) {
-        printf("Return contol condition\n");
+    DPRINT(1, " >> CHECK: ");
+    print_element(current_top, sentinel, 1);
+    //    stack_element_t *top = parser_top(stack);
+    bool cond = is_binary_op(current_top->token.token_type) ||
+                is_unary_op(current_top->token.token_type) ||
+                current_top->token.token_type == T_LPAREN;
+    // current_top->type == FLAG_NONTERM
+    if(!cond && current_top != sentinel) {
+        DPRINT(1, "Return contol condition\n");
         return true;
     }
     return false;
 }
 
 static int parse_func_call(deque_t *stack, adt_stack_t *output, token_t *current,
-                           int *parentheses_level, stack_element_t *sentinel)
+                           int *parentheses_level, stack_element_t *sentinel, int depth)
 {
-    ast_node_t *node = calloc(1, sizeof(ast_node_t));
-    if(node == NULL) {
-        return E_INT;
-    }
+    ast_node_t *node = NULL;
 
-    parse(NT_FUNC_CALL, &node, 0);
+    unget_token();
+    unget_token();
+    int err = parse(NT_FUNC_CALL, &node, 0);
+    if(err != E_OK) {
+        // free node
+        return err;
+    }
 
     prec_get_next_token(current, parentheses_level);
     stack_element_t *top = parser_top(stack);
-    printf("    >>>>> SWITCH TO BOTTOM UP (resume)\n");
-    printf("Top: %s\n", term_to_readable(top->token.token_type));
-    printf("Current: %s\n", term_to_readable(current->token_type));
+    (void) top;
+    DPRINT(6, ">> Switch to BOTTOM UP (resume)\n");
+    DPRINT(3, "  Top: %s\n", term_to_readable(top->token.token_type));
+    DPRINT(3, "  Current: %s\n", term_to_readable(current->token_type));
+    DPRINT(2, "  PLevel: %d\n", *parentheses_level);
 
-    { // TODO move to func
-        element_array_t *group =
-            calloc(sizeof(element_array_t) + 1 * sizeof(element_array_t *), sizeof(char));
-        if(!group) {
-            return E_INT;
-        }
-        group->size = 1;
-        group->id = RULE_FUNC_CALL;
-
-        if(stack_push(output, group) != E_OK) {
-            return E_INT;
-        }
-
-        group->array[0] = (void *) node;
-
-        stack_element_t *e = deque_front(stack);
-        printf("Stopped at: ");
-        print_element(e, sentinel);
-
-        if(push_nonterm(stack) != E_OK) {
-            return E_INT;
-        }
-
-        printf(">>> Pushed rule: %d\n", RULE_FUNC_CALL);
-
-        dbg_print(stack, depth);
+    element_array_t *group =
+        calloc(sizeof(element_array_t) + 1 * sizeof(element_array_t *), sizeof(char));
+    if(!group) {
+        // free node
+        return E_INT;
     }
+    group->size = 1;
+    group->id = RULE_FUNC_CALL;
+
+    if(stack_push(output, group) != E_OK) {
+        // free node
+        return E_INT;
+    }
+
+    group->array[0] = (void *) node;
+
+    stack_element_t *e = deque_front(stack);
+    DPRINT(1, "Stopped at: ");
+    print_element(e, sentinel, 1);
+
+    if(push_nonterm(stack) != E_OK) {
+        return E_INT;
+    }
+
+    DPRINT(3, ">>> Pushed rule: %d\n", RULE_FUNC_CALL);
+
+    dbg_print(stack, depth, 1);
+
     return E_OK;
 }
 
@@ -486,9 +540,10 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
     stack_element_t *top = NULL;
 
     token_t current;
-    int r = get_next_token(&current);
+    int r = prec_get_next_token(&current, &parentheses_level);
+
     if(r != E_OK) {
-        printf("Token get error\n");
+        DPRINT(7, "Token get error\n");
         return r;
     }
     bool return_control = false;
@@ -497,97 +552,104 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
 
         top = parser_top(stack);
         if(!top) {
-            fprintf(stderr, "[INTERNAL, PREC_PARSER] Invalid stack state? idk should not happen\n");
+            DPRINT(9, "[INTERNAL, PREC_PARSER] Invalid stack state? idk should not happen\n");
             return E_INT;
         }
 
-        if(current.token_type == T_RPAREN) {
-            if(parentheses_level == -1 && top == sentinel) {
-                unget_token();
-                printf("    >>>>> SWITCH TO TOP DOWN ( end of func call)\n");
-                break;
-            }
+        DPRINT(2, "Top: %s\n", term_to_readable(top->token.token_type));
+        DPRINT(2, "Current: %s\n", term_to_readable(current.token_type));
+        if(current.token_type == T_IDENTIFIER) {
+            DPRINT(2, "  current id: %s\n", current.string.ptr);
         }
-
-        // printf("Top: %s\n", term_to_readable(top->token.token_type));
-        // printf("Current: %s\n", term_to_readable(current.token_type));
+        dbg_print(stack, depth, 1);
         if(current.token_type == T_IDENTIFIER && !return_control) {
 
-            return_control = check_condition(stack);
+            return_control = check_condition(stack, depth, sentinel);
 
             if(!return_control) {
                 token_t lookahead;
                 get_next_token(&lookahead);
-                printf("Lookahead: %s\n", term_to_readable(lookahead.token_type));
+                DPRINT(2, "Lookahead: %s\n", term_to_readable(lookahead.token_type));
                 if(lookahead.token_type == T_LPAREN) {
-                    printf("    >>>>> SWITCH TO TOP DOWN\n");
+                    DPRINT(6, "<< Switch to TOP DOWN\n");
 
-                    unget_token();
-                    unget_token();
-
-                    if(!is_binary_op(top->token.token_type)) {
-                        printf("Return contol condition (func call)\n");
-                        return_control = true;
-                    } else {
-
-                        int r =
-                            parse_func_call(stack, output, &current, &parentheses_level, sentinel);
-
-                        if(r != E_OK) {
-                            return r;
-                        }
-
-                        if(current.token_type == T_IDENTIFIER && !return_control) {
-                            return_control = check_condition(stack);
-                        }
+                    int r = parse_func_call(stack, output, &current, &parentheses_level, sentinel,
+                                            depth);
+                    if(r != E_OK) {
+                        return r;
                     }
+
+                    if(current.token_type == T_IDENTIFIER) {
+                        return_control = true;
+                    }
+
+                    continue;
                 } else {
                     unget_token();
                 }
             }
         }
 
+        if(current.token_type == T_RPAREN) {
+            if(parentheses_level == -1 && top == sentinel) {
+                unget_token();
+                DPRINT(6, "<< Switch to TOP DOWN (end of func call)\n");
+                break;
+            }
+        }
+
+        if(current.token_type == T_MINUS) {
+            DPRINT(1, ">>>> T_MINUS case: \n");
+            stack_element_t *current_top = deque_front(stack);
+            print_element(current_top, sentinel, 9);
+            dbg_print(stack, depth, 1);
+            if(current_top->type != FLAG_NONTERM &&
+               (current_top == sentinel || is_binary_op(current_top->token.token_type) ||
+                is_unary_op(current_top->token.token_type))) {
+                DPRINT(5, ">> SET TO UNARY\n");
+                current.token_type = T_MINUS_UNARY;
+            }
+        }
+
         token_t token = is_table_terminal(current.token_type) ? current : sentinel->token;
 
         if(top == sentinel && (token.token_type == T_EOF || return_control)) {
-            printf("stopping: end condition\n");
+            DPRINT(4, "stopping: end condition\n");
             unget_token();
             break;
         }
 
         int row = term_to_index(top->token.token_type);
         int col = term_to_index(token.token_type);
-        // printf("Rule at [%d][%d]\n", row, col);
+        DPRINT(3, "Rule at [%d][%d]\n", row, col);
         int precedence = precedence_table[row][col];
 
-        //        if(row == 4 && col == 17) { // # unop workaround
-        //            precedence = PREC_LT;
-        //        }
         if(return_control) {
             precedence = PREC_GT;
         }
+
         switch(precedence) {
         case PREC_EQ:
-            // printf("case prec_eq\n");
+            DPRINT(3, "case prec_eq\n");
             if(!return_control) {
                 result = parser_shift(stack, &current, &parentheses_level, depth, sentinel);
             }
             break;
         case PREC_LT:
-            // printf("case prec_lt\n");
+            DPRINT(3, "case prec_lt\n");
             if(!return_control) {
                 top->mark = true;
                 result = parser_shift(stack, &current, &parentheses_level, depth, sentinel);
             }
             break;
         case PREC_GT:
-            // printf("case prec_gt\n");
+            DPRINT(3, "case prec_gt\n");
             result = parser_reduce(stack, top, output, depth, sentinel);
             break;
         case PREC_ZE:
-            printf("case prec_void\n");
-            printf("Top: %s\n", term_to_readable(top->token.token_type));
-            printf("Current: %s\n", term_to_readable(current.token_type));
+            DPRINT(3, "case prec_void\n");
+            DPRINT(3, "Top: %s\n", term_to_readable(top->token.token_type));
+            DPRINT(3, "Current: %s\n", term_to_readable(current.token_type));
             if(current.token_type == T_IDENTIFIER) {
                 parser_reduce(stack, top, output, depth, sentinel);
                 top = parser_top(stack);
@@ -597,8 +659,8 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
                     break;
                 }
             } else {
-                printf(" prec_void error\n");
-                return E_SYN;
+                DPRINT(3, " prec_void error\n");
+                return E_SEM;
             }
             //            dbg_print(stack, depth);
             break;
@@ -606,24 +668,26 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         if(result != E_OK) {
             return result;
         }
+        dbg_print(stack, depth, 1);
 
-        if(++dbgcount == 80) { // safety guard
-            fprintf(stderr, ">>>>>> LOOP LIMIT REACHED\n");
+        if(++dbgcount == 1337) { // temp
+            DPRINT(9, "[precdence parser safeguard] LOOP LIMIT REACHED\n");
             exit(1);
         }
     }
 
     if(top != sentinel) {
-        dbg_print(stack, depth);
-        fprintf(stderr, "[INTERNAL, PREC_PARSER] stack not empty:\n");
-        dbg_print(stack, depth);
-        return E_SYN;
+        dbg_print(stack, depth, 8);
+        DPRINT(8, "[INTERNAL, PREC_PARSER] stack not empty:\n");
+        dbg_print(stack, depth, 8);
+        return E_SEM;
     }
 
     return result;
 }
 
-static int avengers_assemble(adt_stack_t *right_analysis, ast_node_t **node, stack_element_t *sen)
+static int assemble_ast(adt_stack_t *right_analysis, ast_node_t **node, stack_element_t *sen,
+                        int depth)
 {
     if(stack_empty(right_analysis)) {
         return E_INT;
@@ -631,42 +695,43 @@ static int avengers_assemble(adt_stack_t *right_analysis, ast_node_t **node, sta
     *node = calloc(1, sizeof(ast_node_t));
 
     element_array_t *a = (element_array_t *) stack_pop(right_analysis);
-    printf("  Rule %d: {\n", a->id);
+    DPRINT(3, "  Rule %d: {\n", a->id);
     if(a->id == RULE_FUNC_CALL) {
-        printf("    %d\n", ((ast_node_t *) a->array[0])->node_type);
+        DPRINT(3, "    %d\n", ((ast_node_t *) a->array[0])->node_type);
     } else {
         for(size_t i = 0; i < a->size; ++i) {
             stack_element_t *e = a->array[i];
-            printf("    ");
-            print_element(e, sen);
+            DPRINT(3, "    ");
+            print_element(e, sen, 3);
         }
     }
-    printf("  }\n");
+    DPRINT(3, "  }\n");
 
     switch(a->id) {
     case RULE_UNOP:
         (*node)->node_type = AST_NODE_UNOP;
         (*node)->unop.type = term_to_unop_type(a->array[1]->token.token_type);
-        if(avengers_assemble(right_analysis, &(*node)->unop.operand, sen) != E_OK) {
+        if(assemble_ast(right_analysis, &(*node)->unop.operand, sen, depth) != E_OK) {
             return E_INT;
         }
         break;
     case RULE_BINOP:
         (*node)->node_type = AST_NODE_BINOP;
         (*node)->binop.type = term_to_binop_type(a->array[1]->token.token_type);
-        if(avengers_assemble(right_analysis, &(*node)->binop.right, sen) != E_OK) {
+        if(assemble_ast(right_analysis, &(*node)->binop.right, sen, depth) != E_OK) {
             return E_INT;
         }
-        if(avengers_assemble(right_analysis, &(*node)->binop.left, sen) != E_OK) {
+        if(assemble_ast(right_analysis, &(*node)->binop.left, sen, depth) != E_OK) {
             return E_INT;
         }
         break;
     case RULE_ID:
-        (*node)->node_type = AST_NODE_IDENTIFIER;
-        (*node)->identifier = a->array[0]->token.string;
+        (*node)->node_type = AST_NODE_SYMBOL;
+        (*node)->symbol.name = a->array[0]->token.string;
+        (*node)->symbol.is_declaration = true;
         break;
     case RULE_PARENTHESES:
-        if(avengers_assemble(right_analysis, node, sen)) {
+        if(assemble_ast(right_analysis, node, sen, depth)) {
             return E_INT;
         }
         break;
@@ -712,6 +777,7 @@ static int avengers_assemble(adt_stack_t *right_analysis, ast_node_t **node, sta
     return E_OK;
 }
 
+static int depth_c = 0;
 int precedence_parse(ast_node_t **root)
 {
 
@@ -722,6 +788,8 @@ int precedence_parse(ast_node_t **root)
 
     deque_t stack;
     deque_create(&stack);
+    int depth = depth_c;
+    depth_c++;
 
     stack_element_t *sentinel = malloc(sizeof(stack_element_t));
     sentinel->type = FLAG_TERM;
@@ -734,25 +802,29 @@ int precedence_parse(ast_node_t **root)
         return E_INT;
     }
 
-    printf("Precedence parse start\n");
-    printf(">> SWITCH TO BOTTOM DOWN\n");
+    DPRINT(6, ">> Switch to BOTTOM UP (precedence start)\n");
 
     int r;
-    r = parse_loop(&stack, &right_analysis, depth++, sentinel);
+    r = parse_loop(&stack, &right_analysis, depth, sentinel);
 
-    printf("Precedence parse end. [%d]\n", r);
+    // DPRINT("Precedence parse end. [%d]\n", r);
     if(r == E_OK) {
-        printf("Parse successful\n");
+        DPRINT(5, "Parse successful\n");
 
-        printf("Analysis: {\n");
+        DPRINT(5, "Analysis: {\n");
 
-        avengers_assemble(&right_analysis, root, sentinel);
+        assemble_ast(&right_analysis, root, sentinel, depth);
 
-        printf("}\n");
+        DPRINT(5, "}\n");
+
+        // r = sem_check_expression(*root);
     } else if(r == E_SYN) {
-        printf("Parse syntax error\n");
+        DPRINT(5, "Parse syntax error\n");
+    } else if(r == E_SEM) {
+        DPRINT(5, "Parse exp semantic error\n");
     }
 
     free_parser_bottom_up(&stack, &right_analysis, sentinel);
+    DPRINT(6, "<< Switch to TOP DOWN (precedence end)\n");
     return r;
 }
