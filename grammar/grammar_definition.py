@@ -120,9 +120,10 @@ rules: Dict[str, List[List[str]]] = {
     '<func-type-list2>':                [[',', '<type>', '<func-type-list2>'], [EPS]],
 
     # had to add a continuation even if it's not needed here. parser had to know when to allocate body ast node
-    '<statement-list>':     [['<statement>', '<statement-list2>'], [EPS]],
-    '<statement-list2>':    [['<statement>', '<statement-list2>'], [EPS]],
-    '<statement>':          [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<assignment>'], ['<return-statement>'], ['break']],
+    '<statement-list>':             [['<statement>', '<statement-list2>'], [EPS]],
+    '<statement-list2>':            [['<statement>', '<statement-list2>'], [EPS]],
+    '<statement>':                  [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<identifier>', '<paren-exp-list-or-id-list2>'], ['<return-statement>'], ['break']],
+    '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>']],
 
     '<cond-statement>':     [['if', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>']],
     '<cond-opt-elseif>':    [['elseif', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>'], ['else', '<statement-list>', 'end'], ['end']],
@@ -135,17 +136,17 @@ rules: Dict[str, List[List[str]]] = {
     '<decl-optional-assignment>':   [['=', '<expression>'], [EPS]],
     '<identifier-with-type>':       [['<identifier>', ':', '<type>']],
 
-    '<assignment>':         [['<identifier-list>', '=', '<expression-list>']],
-    '<identifier-list>':    [['<identifier>', '<identifier-list2>']],
-    '<identifier-list2>':   [[',', '<identifier>', '<identifier-list2>'], [EPS]],
-    '<expression-list>':            [['<expression>', '<expression-list2>']],
-    '<expression-list2>':           [[',', '<expression>', '<expression-list2>'], [EPS]],
+    '<assignment>':             [['<identifier-list>', '=', '<expression-list>']],
+    '<identifier-list>':        [['<identifier>', '<identifier-list2>']],
+    '<identifier-list2>':       [[',', '<identifier>', '<identifier-list2>'], [EPS]],
+    '<expression-list>':        [['<expression>', '<expression-list2>']],
+    '<expression-list2>':       [[',', '<expression>', '<expression-list2>'], [EPS]],
 
-    '<return-statement>':   [['return', '<ret-expression-list>']],
-    '<ret-expression-list>':            [['<expression>', '<ret-expression-list2>']],
-    '<ret-expression-list2>':           [[',', '<expression>', '<ret-expression-list2>'], [EPS]],
+    '<return-statement>':       [['return', '<ret-expression-list>']],
+    '<ret-expression-list>':    [['<expression>', '<ret-expression-list2>']],
+    '<ret-expression-list2>':   [[',', '<expression>', '<ret-expression-list2>'], [EPS]],
 
-    '<func-call>': [['<identifier>', '(', '<optional-fun-expression-list>', ')']],
+    '<func-call>':                      [['<identifier>', '(', '<optional-fun-expression-list>', ')']],
     '<optional-fun-expression-list>':   [['<expression>', '<fun-expression-list2>'], [EPS]],
     '<fun-expression-list2>':           [[',', '<expression>', '<fun-expression-list2>'], [EPS]],
 
@@ -164,7 +165,7 @@ terminals: List[str] = list({
     for exp in exps
     for token in exp
     if token not in rules
-})# + ['<expression>']
+})
 non_terminals: List[str] = list(rules.keys())
 
 
