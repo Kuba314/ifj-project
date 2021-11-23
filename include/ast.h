@@ -19,7 +19,6 @@ typedef enum
     AST_NODE_PROGRAM,
 
     AST_NODE_BODY,
-    AST_NODE_ID_TYPE_PAIR,
 
     AST_NODE_IF,
     AST_NODE_WHILE,
@@ -34,10 +33,10 @@ typedef enum
 
     AST_NODE_TYPE,
 
+    AST_NODE_SYMBOL,
     AST_NODE_INTEGER,
     AST_NODE_NUMBER,
     AST_NODE_BOOLEAN,
-    AST_NODE_IDENTIFIER,
     AST_NODE_STRING,
     AST_NODE_NIL,
 } ast_node_type_t;
@@ -74,6 +73,19 @@ typedef enum
 typedef struct ast_node ast_node_t;
 typedef ast_node_t *ast_node_list_t;
 
+typedef struct symbol symbol_t;
+struct symbol {
+    bool is_declaration;
+    union {
+        struct {
+            type_t type;
+            string_t name;
+            string_t suffix;
+        };
+        symbol_t *declaration;
+    };
+};
+
 // declarations of different ast_node types
 typedef struct {
     string_t require;
@@ -85,13 +97,13 @@ typedef struct {
 } ast_body_t;
 
 typedef struct {
-    ast_node_t *name;
+    string_t name;
     ast_node_list_t argument_types;
     ast_node_list_t return_types;
 } ast_func_decl_t;
 
 typedef struct {
-    ast_node_t *name;
+    string_t name;
     ast_node_list_t arguments;
     ast_node_list_t return_types;
     ast_node_t *body;
@@ -131,8 +143,9 @@ typedef struct {
 } ast_assignment_t;
 
 typedef struct {
-    ast_node_t *name;
+    string_t name;
     ast_node_list_t arguments;
+    ast_func_def_t *def;
 } ast_func_call_t;
 
 typedef struct {
@@ -171,15 +184,11 @@ struct ast_node {
         ast_binop_t binop;
         ast_unop_t unop;
         ast_return_t return_values;
-        struct {
-            string_t id;
-            type_t type;
-        } id_type_pair;
 
+        symbol_t symbol;
         uint64_t integer;
         double number;
         bool boolean;
-        string_t identifier;
         string_t string;
         type_t type;
     };
