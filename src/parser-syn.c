@@ -442,7 +442,6 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
     return E_OK;
 }
 
-static void print_ast(int depth, ast_node_t *root);
 static void print_ast_list(int depth, ast_node_list_t list)
 {
     while(list) {
@@ -450,7 +449,7 @@ static void print_ast_list(int depth, ast_node_list_t list)
         list = list->next;
     }
 }
-static void print_ast(int depth, ast_node_t *root)
+void print_ast(int depth, ast_node_t *root)
 {
     switch(root->node_type) {
     case AST_NODE_FUNC_DECL:
@@ -595,7 +594,7 @@ static void print_ast(int depth, ast_node_t *root)
         break;
     }
 }
-static void free_ast(ast_node_t *root)
+void free_ast(ast_node_t *root)
 {
     if(root == NULL) {
         return;
