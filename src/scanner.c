@@ -747,7 +747,7 @@ int get_next_token(token_t *t)
             }
             break;
         case SCANNER_STATE_KEYWORD_IDENTIFIER:
-            if(isdigit(c) || isalpha(c)) {
+            if(c == '_' || isdigit(c) || isalpha(c)) {
                 if(str_append_char(&str, c)) {
                     str_free(&str);
                     return E_INT;

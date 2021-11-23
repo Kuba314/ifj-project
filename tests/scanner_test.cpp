@@ -157,6 +157,11 @@ TEST_F(ScannerInput, KeywordScan)
     EXPECT_EQ(token.token_type, T_IF);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.token_type, T_IDENTIFIER);
+    EXPECT_EQ(strcmp(token.string.ptr, "var_iable"), 0);
+    str_free(&token.string);
+
+    ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LOCAL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);

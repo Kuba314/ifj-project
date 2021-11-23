@@ -6,6 +6,7 @@ _mem
 global
 globalVariable _alsoGlobalVar156
 if
+var_iable
 local
 nil
 require
