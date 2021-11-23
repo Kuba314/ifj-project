@@ -387,7 +387,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
         token_unget();
         if(token.token_type == T_LPAREN) {
             return parse(NT_FUNC_CALL, root, depth);
-        } else if(token.token_type == T_COMMA) {
+        } else if(token.token_type == T_COMMA || token.token_type == T_EQUALS) {
             return parse(NT_ASSIGNMENT, root, depth);
         }
     }
