@@ -45,7 +45,7 @@ typedef struct {
  *
  * @param source_file Pointer to source file to be read from.
  */
-void initialise_file_ptr(FILE *source_file);
+void scanner_init(FILE *source_file);
 
 /**
  * Closes file assigned *fptr.
@@ -53,7 +53,7 @@ void initialise_file_ptr(FILE *source_file);
  * @param fp Pointer to input stream.
  * @return E_OK on success, otherwise E_LEX.
  */
-int close_file(void);
+int scanner_free(void);
 
 /**
  * Main function of scanner, which gets the next token from *fptr.

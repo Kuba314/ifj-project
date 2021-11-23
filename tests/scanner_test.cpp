@@ -16,11 +16,11 @@ class ScannerInput : public ::testing::Test {
     virtual void UseFile(const char *filename)
     {
         FILE *f = fopen(filename, "r");
-        initialise_file_ptr(f);
+        scanner_init(f);
     }
     virtual void TearDown() override
     {
-        close_file();
+        scanner_free();
     }
 };
 
@@ -138,6 +138,7 @@ TEST_F(ScannerInput, KeywordScan)
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "_mem"), 0);
+    str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_GLOBAL);

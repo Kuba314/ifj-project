@@ -215,12 +215,13 @@ static int process_decimal(string_t *str, token_t *t)
     }
 }
 
-void initialise_file_ptr(FILE *source_file)
+void scanner_init(FILE *source_file)
 {
     fptr = source_file;
+    last_token_ix = 0;
 }
 
-int close_file(void)
+int scanner_free(void)
 {
     if(fclose(fptr)) {
         return E_INT;
