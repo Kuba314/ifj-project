@@ -185,3 +185,109 @@ TEST_F(ParserTests, Negate)
 
     check_id(operand, "n");
 }
+TEST_F(ParserTests, Pad)
+{
+    InitTest("tests/test_files/pad.tl");
+
+    EXPECT_EQ(ast->node_type, AST_NODE_PROGRAM);
+    ast_node_t *global_it = ast->program.global_statement_list;
+
+    check_node(global_it, AST_NODE_FUNC_DEF);
+    ast_func_def_t func_def = global_it->func_def;
+
+    check_id(func_def.name, "pad");
+    check_arg_names(func_def, "str", "n_spaces", NULL);
+    check_arg_types(func_def, TYPE_STRING, TYPE_INTEGER, TYPE_NIL);
+    check_type_list(func_def.return_types, TYPE_NIL);
+
+    check_node(func_def.body, AST_NODE_BODY);
+    ast_node_t *statement_it = func_def.body->body.statements;
+
+    check_node(statement_it, AST_NODE_WHILE);
+    ast_node_t *condition = statement_it->while_loop.condition;
+    check_node(condition, AST_NODE_BINOP);
+
+    EXPECT_EQ(condition->binop.type, AST_NODE_BINOP_GT);
+    check_node(condition->binop.left, AST_NODE_IDENTIFIER);
+    check_node(condition->binop.right, AST_NODE_INTEGER);
+    check_id(condition->binop.left, "n_spaces");
+    ASSERT_EQ(condition->binop.right->integer, 0);
+
+    check_node(statement_it->while_loop.body, AST_NODE_BODY);
+    ast_node_t *while_stmt_it = statement_it->while_loop.body->body.statements;
+    check_node(while_stmt_it, AST_NODE_FUNC_CALL);
+    check_id(while_stmt_it->func_call.name, "write");
+    ast_node_t *arg_it = while_stmt_it->func_call.arguments;
+    check_node(arg_it, AST_NODE_STRING);
+    check_str(arg_it, " ");
+    EXPECT_EQ(arg_it->next, nullptr);
+
+    while_stmt_it = while_stmt_it->next;
+    check_node(while_stmt_it, AST_NODE_ASSIGNMENT);
+    ast_node_t *id_it = while_stmt_it->assignment.identifiers;
+    check_node(id_it, AST_NODE_IDENTIFIER);
+    check_id(id_it, "n_spaces");
+    EXPECT_EQ(id_it->next, nullptr);
+
+    ast_node_t *expr_it = while_stmt_it->assignment.expressions;
+    check_node(expr_it, AST_NODE_BINOP);
+
+    EXPECT_EQ(expr_it->binop.type, AST_NODE_BINOP_SUB);
+    check_node(expr_it->binop.left, AST_NODE_IDENTIFIER);
+    check_node(expr_it->binop.right, AST_NODE_INTEGER);
+    check_id(expr_it->binop.left, "n_spaces");
+    ASSERT_EQ(expr_it->binop.right->integer, 1);
+    EXPECT_EQ(expr_it->next, nullptr);
+    EXPECT_EQ(while_stmt_it->next, nullptr);
+
+    statement_it = statement_it->next;
+
+    check_node(statement_it, AST_NODE_FUNC_CALL);
+    check_id(statement_it->func_call.name, "write");
+    ast_node_t *arg2_it = statement_it->func_call.arguments;
+    check_node(arg2_it, AST_NODE_IDENTIFIER);
+    check_id(arg2_it, "str");
+    EXPECT_EQ(arg2_it->next, nullptr);
+}
+TEST_F(ParserTests, HelloWorld)
+{
+    InitTest("tests/test_files/hello_world.tl");
+
+    EXPECT_EQ(ast->node_type, AST_NODE_PROGRAM);
+    ast_node_t *global_it = ast->program.global_statement_list;
+
+    check_node(global_it, AST_NODE_FUNC_DECL);
+    ast_func_decl_t func_decl = global_it->func_decl;
+
+    check_type_list(func_decl.argument_types, TYPE_NIL);
+    check_type_list(func_decl.return_types, TYPE_NIL);
+
+    global_it = global_it->next;
+
+    check_node(global_it, AST_NODE_FUNC_CALL);
+    check_id(global_it->func_call.name, "main");
+    EXPECT_EQ(global_it->func_call.arguments, nullptr);
+
+    global_it = global_it->next;
+
+    ast_func_def_t func_def = global_it->func_def;
+
+    check_id(func_def.name, "main");
+    check_arg_names(func_def, NULL);
+    check_arg_types(func_def, TYPE_NIL);
+    check_type_list(func_def.return_types, TYPE_NIL);
+
+    check_node(func_def.body, AST_NODE_BODY);
+    ast_node_t *statement_it = func_def.body->body.statements;
+
+    check_node(statement_it, AST_NODE_FUNC_CALL);
+    check_id(statement_it->func_call.name, "write");
+
+    ast_node_t *arg_it = statement_it->func_call.arguments;
+    check_node(arg_it, AST_NODE_STRING);
+    check_str(arg_it, "Hello world!\n");
+    EXPECT_EQ(arg_it->next, nullptr);
+
+    EXPECT_EQ(statement_it->next, nullptr);
+    EXPECT_EQ(global_it->next, nullptr);
+}
