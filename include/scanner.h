@@ -24,6 +24,8 @@
 #include "error.h"
 #include "type.h"
 
+#define TOKEN_BUF_LENGTH 2
+
 /**
  * @struct Definition of token type
  */
@@ -62,9 +64,8 @@ int close_file(void);
 int get_next_token(token_t *t);
 
 /**
- * Saves up to two tokens for later use.
+ * Return up to TOKEN_BUF_LENGTH tokens for later use.
  *
- * @param[out] t Pointer to token to be saved.
  * @return E_OK on success, otherwise return E_LEX.
  */
-int unget_token(token_t *t);
+int unget_token(void);
