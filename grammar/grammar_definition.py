@@ -123,7 +123,7 @@ rules: Dict[str, List[List[str]]] = {
     '<statement-list>':             [['<statement>', '<statement-list2>'], [EPS]],
     '<statement-list2>':            [['<statement>', '<statement-list2>'], [EPS]],
     '<statement>':                  [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<identifier>', '<paren-exp-list-or-id-list2>'], ['<return-statement>'], ['break']],
-    '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>']],
+    '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>'], ['=', '<expression-list>']],
 
     '<cond-statement>':     [['if', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>']],
     '<cond-opt-elseif>':    [['elseif', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>'], ['else', '<statement-list>', 'end'], ['end']],
