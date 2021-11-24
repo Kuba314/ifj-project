@@ -203,8 +203,8 @@ bool is_binary_op(term_type_t type)
 bool is_unary_op(term_type_t type)
 {
     switch(type) {
-    case T_MINUS:
-        return true;
+    // m case T_MINUS:
+    //  return true;
     case T_HASH:
         return true;
     case T_NOT:
