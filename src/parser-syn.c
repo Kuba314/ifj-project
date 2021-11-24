@@ -45,11 +45,12 @@ static ast_node_t *alloc_sym_use_node(string_t id)
         return NULL;
     }
     node->node_type = AST_NODE_SYMBOL;
-    node->symbol.declaration = symtable_find(id.ptr);
-    if(node->symbol.declaration == NULL) {
+    ast_node_t *decl = symtable_find(id.ptr);
+    if(decl == NULL) {
         fprintf(stderr, "error: variable \"%s\" is not defined\n", id.ptr);
         return NULL;
     }
+    node->symbol.declaration = &decl->symbol;
     return node;
 }
 static ast_node_t *alloc_type_node(type_t type)
@@ -103,13 +104,13 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
     case T_IDENTIFIER:
         switch(parent_nterm) {
         case NT_FUNC_CALL:
-            (*root)->func_call.name = alloc_sym_use_node(token.string);
+            (*root)->func_call.name = token.string;
             break;
         case NT_FUNC_DECL:
-            (*root)->func_decl.name = alloc_sym_decl_node(token.string);
+            (*root)->func_decl.name = token.string;
             break;
         case NT_FUNC_DEF:
-            (*root)->func_def.name = alloc_sym_decl_node(token.string);
+            (*root)->func_def.name = token.string;
             break;
         // how do we handle scopes again?
         case NT_FOR_LOOP:
@@ -437,7 +438,7 @@ void print_ast(int depth, ast_node_t *root)
     case AST_NODE_FUNC_DECL:
         print(depth, "func-decl:");
         print(depth + 1, "name:");
-        print_ast(depth + 2, root->func_decl.name);
+        print(depth + 2, root->func_decl.name.ptr);
         print(depth + 1, "return_types:");
         print_ast_list(depth + 2, root->func_decl.return_types);
         print(depth + 1, "argument_types:");
@@ -446,7 +447,7 @@ void print_ast(int depth, ast_node_t *root)
     case AST_NODE_FUNC_DEF:
         print(depth, "func-def:");
         print(depth + 1, "name:");
-        print_ast(depth + 2, root->func_def.name);
+        print(depth + 2, root->func_def.name.ptr);
         print(depth + 1, "return_types:");
         print_ast_list(depth + 2, root->func_def.return_types);
         print(depth + 1, "arguments:");
@@ -456,7 +457,7 @@ void print_ast(int depth, ast_node_t *root)
     case AST_NODE_FUNC_CALL:
         print(depth, "func-call:");
         print(depth + 1, "name:");
-        print_ast(depth + 2, root->func_call.name);
+        print(depth + 2, root->func_call.name.ptr);
         print(depth + 1, "arguments:");
         print_ast_list(depth + 2, root->func_call.arguments);
         break;
@@ -586,18 +587,18 @@ void free_ast(ast_node_t *root)
         free_ast(root->program.global_statement_list);
         break;
     case AST_NODE_FUNC_DECL:
-        free_ast(root->func_decl.name);
+        str_free(&root->func_decl.name);
         free_ast(root->func_decl.argument_types);
         free_ast(root->func_decl.return_types);
         break;
     case AST_NODE_FUNC_DEF:
-        free_ast(root->func_def.name);
+        str_free(&root->func_def.name);
         free_ast(root->func_def.arguments);
         free_ast(root->func_def.return_types);
         free_ast(root->func_def.body);
         break;
     case AST_NODE_FUNC_CALL:
-        free_ast(root->func_call.name);
+        str_free(&root->func_call.name);
         free_ast(root->func_call.arguments);
         break;
     case AST_NODE_DECLARATION:
