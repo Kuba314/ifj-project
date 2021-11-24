@@ -155,9 +155,9 @@ void check_type_list(ast_node_t *type_it, ...)
     va_end(args);
 }
 
-TEST_F(ParserTests, Negate)
+TEST_F(ParserTests, Add)
 {
-    InitTest("tests/test_files/negate.tl");
+    InitTest("tests/test_files/add.tl");
 
     EXPECT_EQ(ast->node_type, AST_NODE_PROGRAM);
     ast_node_t *global_it = ast->program.global_statement_list;
@@ -165,9 +165,9 @@ TEST_F(ParserTests, Negate)
     check_node(global_it, AST_NODE_FUNC_DEF);
     ast_func_def_t func_def = global_it->func_def;
 
-    check_id(func_def.name, "negate");
-    check_arg_names(func_def, "n", NULL);
-    check_arg_types(func_def, TYPE_INTEGER, TYPE_NIL);
+    check_id(func_def.name, "add");
+    check_arg_names(func_def, "a", "b", NULL);
+    check_arg_types(func_def, TYPE_INTEGER, TYPE_INTEGER, TYPE_NIL);
     check_type_list(func_def.return_types, TYPE_INTEGER, TYPE_NIL);
 
     ASSERT_NE(func_def.body, nullptr);
@@ -177,13 +177,47 @@ TEST_F(ParserTests, Negate)
     check_node(statement_it, AST_NODE_RETURN);
     ast_node_list_t ret_values_it = statement_it->return_values.values;
 
-    check_node(ret_values_it, AST_NODE_UNOP);
-    EXPECT_EQ(ret_values_it->unop.type, AST_NODE_UNOP_NEG);
-    ast_node_t *operand = ret_values_it->unop.operand;
-    ASSERT_NE(operand, nullptr);
-    EXPECT_EQ(ret_values_it->next, nullptr);
+    check_node(ret_values_it, AST_NODE_BINOP);
+    EXPECT_EQ(ret_values_it->binop.type, AST_NODE_BINOP_ADD);
+    check_node(ret_values_it->binop.left, AST_NODE_IDENTIFIER);
+    check_node(ret_values_it->binop.right, AST_NODE_IDENTIFIER);
+    check_id(ret_values_it->binop.left, "a");
+    check_id(ret_values_it->binop.right, "b");
 
-    check_id(operand, "n");
+    global_it = global_it->next;
+
+    ast_func_def_t func_def2 = global_it->func_def;
+
+    check_id(func_def2.name, "add_local");
+    check_arg_names(func_def2, "a", "b", NULL);
+    check_arg_types(func_def2, TYPE_INTEGER, TYPE_INTEGER, TYPE_NIL);
+    check_type_list(func_def2.return_types, TYPE_INTEGER, TYPE_NIL);
+
+    ASSERT_NE(func_def2.body, nullptr);
+    EXPECT_EQ(func_def2.body->node_type, AST_NODE_BODY);
+    ast_node_t *statement_it2 = func_def2.body->body.statements;
+
+    check_node(statement_it2, AST_NODE_DECLARATION);
+    EXPECT_EQ(statement_it2->declaration.id_type_pair->id_type_pair.type, TYPE_INTEGER);
+    EXPECT_EQ(strcmp(statement_it2->declaration.id_type_pair->id_type_pair.id.ptr, "c"), 0);
+    check_node(statement_it2->declaration.assignment, AST_NODE_BINOP);
+    EXPECT_EQ(statement_it2->declaration.assignment->binop.type, AST_NODE_BINOP_ADD);
+    check_node(statement_it2->declaration.assignment->binop.left, AST_NODE_IDENTIFIER);
+    check_node(statement_it2->declaration.assignment->binop.right, AST_NODE_IDENTIFIER);
+    check_id(statement_it2->declaration.assignment->binop.left, "a");
+    check_id(statement_it2->declaration.assignment->binop.right, "b");
+
+    statement_it2 = statement_it2->next;
+
+    check_node(statement_it2, AST_NODE_RETURN);
+    ast_node_list_t ret_values_it2 = statement_it2->return_values.values;
+
+    check_node(ret_values_it2, AST_NODE_IDENTIFIER);
+    check_id(ret_values_it2, "c");
+
+    EXPECT_EQ(ret_values_it2->next, nullptr);
+    EXPECT_EQ(statement_it2->next, nullptr);
+    EXPECT_EQ(global_it->next, nullptr);
 }
 TEST_F(ParserTests, Pad)
 {
