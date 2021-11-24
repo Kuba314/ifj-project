@@ -214,6 +214,7 @@ const char *term_to_readable(term_type_t term)
 }
 int parser_init()
 {
+    mempool.offset = 0;
     mempool.data = calloc(305, sizeof(nut_type_t));
     if(mempool.data == NULL) {
         return E_INT;
