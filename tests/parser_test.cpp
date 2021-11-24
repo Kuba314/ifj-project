@@ -71,19 +71,19 @@ class ParserTests : public ::testing::Test {
 };
 
 // these have to be macros, because ASSERT_ doesn't exit, it just returns
-#define check_str(node, str) \
-    ASSERT_NE(node, nullptr); \
-    EXPECT_EQ(node->node_type, AST_NODE_STRING); \
+#define check_str(node, str)                                                                       \
+    ASSERT_NE(node, nullptr);                                                                      \
+    EXPECT_EQ(node->node_type, AST_NODE_STRING);                                                   \
     EXPECT_EQ(strcmp(node->string.ptr, str), 0);
 
-#define check_id(node, str) \
-    ASSERT_NE(node, nullptr); \
-    EXPECT_EQ(node->node_type, AST_NODE_IDENTIFIER); \
+#define check_id(node, str)                                                                        \
+    ASSERT_NE(node, nullptr);                                                                      \
+    EXPECT_EQ(node->node_type, AST_NODE_IDENTIFIER);                                               \
     EXPECT_EQ(strcmp(node->identifier.ptr, str), 0);
 
 // node_type has to be asserted, because usually nodes have children and this wouldn't end well
-#define check_node(node, type) \
-    ASSERT_NE(node, nullptr); \
+#define check_node(node, type)                                                                     \
+    ASSERT_NE(node, nullptr);                                                                      \
     ASSERT_EQ(node->node_type, type);
 
 void check_arg_names(ast_func_def_t func_def, ...)
