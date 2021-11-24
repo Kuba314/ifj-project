@@ -133,7 +133,7 @@ typedef struct {
 } ast_for_t;
 
 typedef struct {
-    ast_node_t *id_type_pair;
+    symbol_t symbol;
     ast_node_t *assignment;
 } ast_declaration_t;
 
