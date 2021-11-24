@@ -9,7 +9,6 @@
 #include "ast.h"
 #include "error.h"
 
-
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
 {
     while(*node_list) {
