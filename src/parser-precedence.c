@@ -327,8 +327,10 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
     if(stack_push(output, group) != E_OK) {
         return E_INT;
     }
-
+    // printf("Exec rule: %d\n", id);
     for(size_t i = 0; i < rule->list_size; ++i) {
+        // printf("Rule i: %lu\n", i);
+        // dbg_print(stack, 0);
         stack_element_t *e = deque_front(stack);
         if(!e || e->mark) {
             fprintf(stderr, "[INTERNAL, PREC_PARSER] Syntax error: sequence underflow.\n");
@@ -382,6 +384,8 @@ static int parser_reduce(deque_t *stack, stack_element_t *top, adt_stack_t *outp
         fprintf(stderr, "[INTERNAL, PREC_PARSER] error: no rule\n");
     }
 
+    // printf("Reduced:\n");
+    // dbg_print(stack, depth);
     return r;
 }
 
@@ -417,6 +421,64 @@ static int parser_shift(deque_t *stack, token_t *current, int *level, int depth,
 
 static int dbgcount = 0;
 
+static bool check_condition(deque_t *stack)
+{
+    stack_element_t *current_top = deque_front(stack);
+    // printf(" >> CHECK: ");
+    // print_element(atop, sentinel);
+    if(current_top->type == FLAG_NONTERM) {
+        printf("Return contol condition\n");
+        return true;
+    }
+    return false;
+}
+
+static int parse_func_call(deque_t *stack, adt_stack_t *output, token_t *current,
+                           int *parentheses_level, stack_element_t *sentinel)
+{
+    ast_node_t *node = calloc(1, sizeof(ast_node_t));
+    if(node == NULL) {
+        return E_INT;
+    }
+
+    parse(NT_FUNC_CALL, &node, 0);
+
+    prec_get_next_token(current, parentheses_level);
+    stack_element_t *top = parser_top(stack);
+    printf("    >>>>> SWITCH TO BOTTOM UP (resume)\n");
+    printf("Top: %s\n", term_to_readable(top->token.token_type));
+    printf("Current: %s\n", term_to_readable(current->token_type));
+
+    { // TODO move to func
+        element_array_t *group =
+            calloc(sizeof(element_array_t) + 1 * sizeof(element_array_t *), sizeof(char));
+        if(!group) {
+            return E_INT;
+        }
+        group->size = 1;
+        group->id = RULE_FUNC_CALL;
+
+        if(stack_push(output, group) != E_OK) {
+            return E_INT;
+        }
+
+        group->array[0] = (void *) node;
+
+        stack_element_t *e = deque_front(stack);
+        printf("Stopped at: ");
+        print_element(e, sentinel);
+
+        if(push_nonterm(stack) != E_OK) {
+            return E_INT;
+        }
+
+        printf(">>> Pushed rule: %d\n", RULE_FUNC_CALL);
+
+        dbg_print(stack, depth);
+    }
+    return E_OK;
+}
+
 static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_element_t *sentinel)
 {
     int parentheses_level = 0;
@@ -432,135 +494,94 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
     bool return_control = false;
 
     while(true) {
+
         top = parser_top(stack);
         if(!top) {
-            fprintf(stderr, "[INTERNAL, PREC_PARSER] Invalid stack state? idk\n");
+            fprintf(stderr, "[INTERNAL, PREC_PARSER] Invalid stack state? idk should not happen\n");
             return E_INT;
         }
 
         if(current.token_type == T_RPAREN) {
             if(parentheses_level == -1 && top == sentinel) {
                 unget_token();
-                printf("stopping: end condition end of )\n");
-                //                result = parser_reduce(stack, top, output, depth, sentinel);
-                //                if (result != E_OK) {
-                //                    return result;
-                //                }
-                //                top = parser_top(stack);
-
                 printf("    >>>>> SWITCH TO TOP DOWN ( end of func call)\n");
-                //                token_t t;
-                //                get_next_token(&t);
-                //                printf("Transition: %s\n", term_to_readable(t.token_type));
-                //                unget_token();
                 break;
             }
         }
 
+        // printf("Top: %s\n", term_to_readable(top->token.token_type));
+        // printf("Current: %s\n", term_to_readable(current.token_type));
         if(current.token_type == T_IDENTIFIER && !return_control) {
-            // printf(" >> CHECK\n");
-            token_t lookahead;
-            get_next_token(&lookahead);
-            printf("Lookahead: %s\n", term_to_readable(lookahead.token_type));
-            if(lookahead.token_type == T_LPAREN) {
-                printf("    >>>>> SWITCH TO TOP DOWN\n");
-                //                printf("Top:  ");
-                //                print_element(top, sentinel);
 
-                unget_token();
-                unget_token();
+            return_control = check_condition(stack);
 
-                //                token_t t;
-                //                get_next_token(&t);
-                //                printf("Transition: %s\n", term_to_readable(t.token_type));
-                //                unget_token();
+            if(!return_control) {
+                token_t lookahead;
+                get_next_token(&lookahead);
+                printf("Lookahead: %s\n", term_to_readable(lookahead.token_type));
+                if(lookahead.token_type == T_LPAREN) {
+                    printf("    >>>>> SWITCH TO TOP DOWN\n");
 
-                ast_node_t *node = calloc(1, sizeof(ast_node_t));
-                if(node == NULL) {
-                    return E_INT;
+                    unget_token();
+                    unget_token();
+
+                    if(!is_binary_op(top->token.token_type)) {
+                        printf("Return contol condition (func call)\n");
+                        return_control = true;
+                    } else {
+
+                        int r =
+                            parse_func_call(stack, output, &current, &parentheses_level, sentinel);
+
+                        if(r != E_OK) {
+                            return r;
+                        }
+
+                        if(current.token_type == T_IDENTIFIER && !return_control) {
+                            return_control = check_condition(stack);
+                        }
+                    }
+                } else {
+                    unget_token();
                 }
-                parse(NT_FUNC_CALL, &node, 0);
-
-                printf("    >>>>> SWITCH TO BOTTOM UP (resume)\n");
-
-                //                get_next_token(&t);
-                //                printf("Transition: %s\n", term_to_readable(t.token_type));
-                //                unget_token();
-
-                prec_get_next_token(&current, &parentheses_level);
-                top = parser_top(stack);
-                // top->mark = true;
-
-                //                printf("Top: %s\n", term_to_readable(top->token.token_type));
-                //                printf("Current: %s\n", term_to_readable(current.token_type));
-                //                dbg_print(stack, depth);
-
-                {
-                    element_array_t *group = calloc(
-                        sizeof(element_array_t) + 1 * sizeof(element_array_t *), sizeof(char));
-                    if(!group) {
-                        return E_INT;
-                    }
-                    group->size = 1;
-                    group->id = RULE_FUNC_CALL;
-
-                    if(stack_push(output, group) != E_OK) {
-                        return E_INT;
-                    }
-
-                    group->array[0] = (void *) node;
-
-                    stack_element_t *e = deque_front(stack);
-                    printf("Stopped at: ");
-                    print_element(e, sentinel);
-                    //                    if(!e->mark) {
-                    //                        fprintf(stderr, "[INTERNAL, PREC_PARSER] Syntax error:
-                    //                        sequence overflow. (2)\n"); return E_SYN;
-                    //                    }
-                    //                    e->mark = false;
-
-                    if(push_nonterm(stack) != E_OK) {
-                        return E_INT;
-                    }
-
-                    printf(">>> Pushed rule: %d\n", RULE_FUNC_CALL);
-
-                    dbg_print(stack, depth);
-                }
-            } else {
-                unget_token();
             }
         }
 
         token_t token = is_table_terminal(current.token_type) ? current : sentinel->token;
-        //        printf("Top: %s\n", term_to_readable(top->token.token_type));
-        //        printf("Current: %s\n", term_to_readable(current.token_type));
 
-        if(top == sentinel && token.token_type == T_EOF) {
+        if(top == sentinel && (token.token_type == T_EOF || return_control)) {
             printf("stopping: end condition\n");
             unget_token();
             break;
         }
 
-        int precedence =
-            precedence_table[term_to_index(top->token.token_type)][term_to_index(token.token_type)];
+        int row = term_to_index(top->token.token_type);
+        int col = term_to_index(token.token_type);
+        // printf("Rule at [%d][%d]\n", row, col);
+        int precedence = precedence_table[row][col];
+
+        //        if(row == 4 && col == 17) { // # unop workaround
+        //            precedence = PREC_LT;
+        //        }
+        if(return_control) {
+            precedence = PREC_GT;
+        }
         switch(precedence) {
         case PREC_EQ:
-            //            printf("case prec_eq\n");
+            // printf("case prec_eq\n");
             if(!return_control) {
                 result = parser_shift(stack, &current, &parentheses_level, depth, sentinel);
             }
             break;
         case PREC_LT:
-            //            printf("case prec_lt\n");
+            // printf("case prec_lt\n");
             if(!return_control) {
                 top->mark = true;
                 result = parser_shift(stack, &current, &parentheses_level, depth, sentinel);
             }
-            // top = stack_top(stack);
             break;
         case PREC_GT:
-            //            printf("case prec_gt\n");
+            // printf("case prec_gt\n");
             result = parser_reduce(stack, top, output, depth, sentinel);
             break;
         case PREC_ZE:
@@ -585,14 +606,8 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         if(result != E_OK) {
             return result;
         }
-        if(return_control) {
-            printf("Returning to top down\n");
-            printf("Top: %s\n", term_to_readable(top->token.token_type));
-            printf("Current: %s\n", term_to_readable(current.token_type));
-            break;
-        }
 
-        if(++dbgcount == 20) { // safety guard
+        if(++dbgcount == 80) { // safety guard
             fprintf(stderr, ">>>>>> LOOP LIMIT REACHED\n");
             exit(1);
         }
@@ -639,9 +654,6 @@ static int avengers_assemble(adt_stack_t *right_analysis, ast_node_t **node, sta
     case RULE_BINOP:
         (*node)->node_type = AST_NODE_BINOP;
         (*node)->binop.type = term_to_binop_type(a->array[1]->token.token_type);
-        //          printf("binop:    ");
-        //            print_element(a->array[1], sen);
-        // (*node)->binop.type = // TODO
         if(avengers_assemble(right_analysis, &(*node)->binop.right, sen) != E_OK) {
             return E_INT;
         }
@@ -717,18 +729,15 @@ int precedence_parse(ast_node_t **root)
     sentinel->token.token_type = T_EOF;
 
     if(deque_push_front(&stack, sentinel) != E_OK) {
+        free(sentinel);
         free_parser_bottom_up(&stack, &right_analysis, sentinel);
         return E_INT;
     }
 
     printf("Precedence parse start\n");
+    printf(">> SWITCH TO BOTTOM DOWN\n");
 
     int r;
-    //    token_t current;
-    //    int r = get_next_token(&current);
-    //    printf("Transition: %s\n", term_to_readable(current.token_type));
-    //    unget_token();
-
     r = parse_loop(&stack, &right_analysis, depth++, sentinel);
 
     printf("Precedence parse end. [%d]\n", r);
