@@ -82,6 +82,7 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write('}\n')
 
         f.write( 'int parser_init()\n{\n')
+        f.write( '    mempool.offset = 0;')
         f.write(f'    mempool.data = calloc({total_exp_len}, sizeof(nut_type_t));\n')
         f.write( '    if(mempool.data == NULL) {\n')
         f.write( '        return E_INT;\n')
