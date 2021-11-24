@@ -143,7 +143,7 @@ rules: Dict[str, List[List[str]]] = {
     '<expression-list2>':       [[',', '<expression>', '<expression-list2>'], [EPS]],
 
     '<return-statement>':       [['return', '<ret-expression-list>']],
-    '<ret-expression-list>':    [['<expression>', '<ret-expression-list2>']],
+    '<ret-expression-list>':    [['<expression>', '<ret-expression-list2>'], [EPS]],
     '<ret-expression-list2>':   [[',', '<expression>', '<ret-expression-list2>'], [EPS]],
 
     '<func-call>':                      [['<identifier>', '(', '<optional-fun-expression-list>', ')']],
@@ -185,7 +185,9 @@ for nt, exps in rules.items():
 
     if got_eps:
         for follow_token in get_follow(nt, []):
-            table[nt][follow_token] = [EPS]
+            # prefer expression expansion after return
+            if nt != '<ret-expression-list>':
+                table[nt][follow_token] = [EPS]
 
 # change eps terminal to '$' in header signalling end of program
 for expd in table.values():
