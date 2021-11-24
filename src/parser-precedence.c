@@ -11,8 +11,6 @@
 #include "parser.h"
 #include "parser-generated.h"
 
-#include "tokensim.h"
-
 typedef enum
 {
     RULE_UNOP,
@@ -53,7 +51,7 @@ static bool check_lparen(stack_element_t *element)
 
 static bool check_nonterm(stack_element_t *element)
 {
-    return element->type = FLAG_NONTERM;
+    return element->type == FLAG_NONTERM;
 }
 
 static bool check_binop(stack_element_t *element)
@@ -367,19 +365,14 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
 static int parser_reduce(deque_t *stack, stack_element_t *top, adt_stack_t *output, int depth,
                          stack_element_t *sen)
 {
-
-    //    printf("Reduce start:\n");
-    //    dbg_print(stack, depth);
+    (void) depth;
 
     int r = E_SYN;
     bool executed = false;
-    // printf("Finding rule for: ");
-    // print_element(top, sen);
 
     for(size_t i = 0; i < sizeof(rules) / sizeof(rule_t); ++i) {
 
         if(rules[i].condition(top)) {
-            //          printf("Exec rule: %lu\n", i);
             r = execute_rule(i, stack, &rules[i], output, sen);
             executed = true;
             break;
@@ -389,15 +382,12 @@ static int parser_reduce(deque_t *stack, stack_element_t *top, adt_stack_t *outp
         fprintf(stderr, "[INTERNAL, PREC_PARSER] error: no rule\n");
     }
 
-    //    printf("Reduce end:\n");
-    //    dbg_print(stack, depth);
-
     return r;
 }
 
 static int prec_get_next_token(token_t *current, int *level)
 {
-    int r = token_gen(current);
+    int r = get_next_token(current);
     if(r != E_OK) {
         return r;
     }
@@ -434,7 +424,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
     stack_element_t *top = NULL;
 
     token_t current;
-    int r = token_gen(&current);
+    int r = get_next_token(&current);
     if(r != E_OK) {
         printf("Token get error\n");
         return r;
@@ -450,7 +440,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
 
         if(current.token_type == T_RPAREN) {
             if(parentheses_level == -1 && top == sentinel) {
-                token_unget(&current);
+                unget_token();
                 printf("stopping: end condition end of )\n");
                 //                result = parser_reduce(stack, top, output, depth, sentinel);
                 //                if (result != E_OK) {
@@ -460,9 +450,9 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
 
                 printf("    >>>>> SWITCH TO TOP DOWN ( end of func call)\n");
                 //                token_t t;
-                //                token_gen(&t);
+                //                get_next_token(&t);
                 //                printf("Transition: %s\n", term_to_readable(t.token_type));
-                //                token_unget();
+                //                unget_token();
                 break;
             }
         }
@@ -470,20 +460,20 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         if(current.token_type == T_IDENTIFIER && !return_control) {
             // printf(" >> CHECK\n");
             token_t lookahead;
-            token_gen(&lookahead);
+            get_next_token(&lookahead);
             printf("Lookahead: %s\n", term_to_readable(lookahead.token_type));
             if(lookahead.token_type == T_LPAREN) {
                 printf("    >>>>> SWITCH TO TOP DOWN\n");
                 //                printf("Top:  ");
                 //                print_element(top, sentinel);
 
-                token_unget(&lookahead);
-                token_unget(&current);
+                unget_token();
+                unget_token();
 
                 //                token_t t;
-                //                token_gen(&t);
+                //                get_next_token(&t);
                 //                printf("Transition: %s\n", term_to_readable(t.token_type));
-                //                token_unget();
+                //                unget_token();
 
                 ast_node_t *node = calloc(1, sizeof(ast_node_t));
                 if(node == NULL) {
@@ -493,9 +483,9 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
 
                 printf("    >>>>> SWITCH TO BOTTOM UP (resume)\n");
 
-                //                token_gen(&t);
+                //                get_next_token(&t);
                 //                printf("Transition: %s\n", term_to_readable(t.token_type));
-                //                token_unget();
+                //                unget_token();
 
                 prec_get_next_token(&current, &parentheses_level);
                 top = parser_top(stack);
@@ -538,7 +528,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
                     dbg_print(stack, depth);
                 }
             } else {
-                token_unget(&lookahead);
+                unget_token();
             }
         }
 
@@ -548,7 +538,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
 
         if(top == sentinel && token.token_type == T_EOF) {
             printf("stopping: end condition\n");
-            token_unget(&current);
+            unget_token();
             break;
         }
 
@@ -582,7 +572,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
                 top = parser_top(stack);
                 return_control = true;
                 if(top == sentinel) {
-                    unget_token(&current);
+                    unget_token();
                     break;
                 }
             } else {
@@ -689,6 +679,7 @@ static int avengers_assemble(adt_stack_t *right_analysis, ast_node_t **node, sta
             break;
         case T_NIL:
             (*node)->node_type = AST_NODE_NIL;
+            break;
         default:
             return E_INT;
         }
@@ -734,9 +725,9 @@ int precedence_parse(ast_node_t **root)
 
     int r;
     //    token_t current;
-    //    int r = token_gen(&current);
+    //    int r = get_next_token(&current);
     //    printf("Transition: %s\n", term_to_readable(current.token_type));
-    //    token_unget();
+    //    unget_token();
 
     r = parse_loop(&stack, &right_analysis, depth++, sentinel);
 
