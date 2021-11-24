@@ -132,7 +132,7 @@ rules: Dict[str, List[List[str]]] = {
     '<optional-for-step>':  [[',', '<expression>'], [EPS]],
     '<repeat-until>':       [['repeat', '<statement-list>', 'until', '<expression>']],
 
-    '<declaration>':                [['local', '<identifier-with-type>', '<decl-optional-assignment>']],
+    '<declaration>':                [['local', '<identifier>', ':', '<type>', '<decl-optional-assignment>']],
     '<decl-optional-assignment>':   [['=', '<expression>'], [EPS]],
     '<identifier-with-type>':       [['<identifier>', ':', '<type>']],
 
