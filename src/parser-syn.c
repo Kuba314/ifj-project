@@ -9,6 +9,7 @@
 #include "ast.h"
 #include "symtable.h"
 #include "error.h"
+#include "semantics.h"
 
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
 {
@@ -45,12 +46,10 @@ static ast_node_t *alloc_sym_use_node(string_t id)
         return NULL;
     }
     node->node_type = AST_NODE_SYMBOL;
-    ast_node_t *decl = symtable_find(id.ptr);
-    if(decl == NULL) {
-        fprintf(stderr, "error: variable \"%s\" is not defined\n", id.ptr);
-        return NULL;
-    }
-    node->symbol.declaration = &decl->symbol;
+
+    // other attributes will be filled in later
+    node->symbol.is_declaration = true;
+    node->symbol.name = id;
     return node;
 }
 static ast_node_t *alloc_type_node(type_t type)
@@ -119,6 +118,10 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
         case NT_IDENTIFIER_WITH_TYPE:
             last_root = node_list_append(root, alloc_sym_decl_node(token.string));
             break;
+        case NT_DECLARATION:
+            (*root)->declaration.symbol.name = token.string;
+            (*root)->declaration.symbol.is_declaration = true;
+            break;
         case NT_IDENTIFIER_LIST:
         case NT_IDENTIFIER_LIST2:
             node_list_append(root, alloc_sym_use_node(token.string));
@@ -142,6 +145,9 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
             break;
         case NT_IDENTIFIER_WITH_TYPE:
             (*last_root)->symbol.type = token.type;
+            break;
+        case NT_DECLARATION:
+            (*root)->declaration.symbol.type = token.type;
             break;
         default:
             error = true;
@@ -223,8 +229,8 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
     case NT_DECLARATION:
         switch((*root)->visited_children++) {
         case 0:
-        //     return &(*root)->declaration.symbol;
-        // case 1:
+            return root;
+        case 1:
             return &(*root)->declaration.assignment;
         }
         break;
@@ -421,6 +427,11 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
                 }
             }
         }
+
+        int r = sem_check(*root, i, expected);
+        if(r != E_OK) {
+            return r;
+        }
     }
     return E_OK;
 }
@@ -464,8 +475,11 @@ void print_ast(int depth, ast_node_t *root)
     case AST_NODE_DECLARATION:
         print(depth, "decl:");
         // print_ast(depth + 1, root->declaration.symbol);
-        symbol_t sym_decl = (root->declaration.symbol.is_declaration) ? root->declaration.symbol : *root->declaration.symbol.declaration;
-        print(depth, "sym: %s: %s (%s)", sym_decl.name, type_to_readable(sym_decl.type), sym_decl.suffix);
+        symbol_t sym_decl = (root->declaration.symbol.is_declaration)
+                                ? root->declaration.symbol
+                                : *root->declaration.symbol.declaration;
+        print(depth, "sym: %s: %s (%s)", sym_decl.name, type_to_readable(sym_decl.type),
+              sym_decl.suffix);
         if(root->declaration.assignment) {
             print(depth + 1, "assign:");
             print_ast(depth + 2, root->declaration.assignment);
