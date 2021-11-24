@@ -7,6 +7,7 @@
 
 #include "scanner.h"
 #include "ast.h"
+#include "symtable.h"
 #include "error.h"
 
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
@@ -24,14 +25,31 @@ static ast_node_t **node_list_tail(ast_node_list_t *node_list)
     }
     return node_list;
 }
-static ast_node_t *alloc_id_node(string_t id)
+static ast_node_t *alloc_sym_decl_node(string_t id)
 {
     ast_node_t *node = calloc(1, sizeof(ast_node_t));
     if(node == NULL) {
         return NULL;
     }
-    node->node_type = AST_NODE_IDENTIFIER;
-    node->identifier = id;
+    node->node_type = AST_NODE_SYMBOL;
+
+    // other attributes will be filled in later
+    node->symbol.is_declaration = true;
+    node->symbol.name = id;
+    return node;
+}
+static ast_node_t *alloc_sym_use_node(string_t id)
+{
+    ast_node_t *node = calloc(1, sizeof(ast_node_t));
+    if(node == NULL) {
+        return NULL;
+    }
+    node->node_type = AST_NODE_SYMBOL;
+    node->symbol.declaration = symtable_find(id.ptr);
+    if(node->symbol.declaration == NULL) {
+        fprintf(stderr, "error: variable \"%s\" is not defined\n", id.ptr);
+        return NULL;
+    }
     return node;
 }
 static ast_node_t *alloc_type_node(type_t type)
@@ -42,16 +60,6 @@ static ast_node_t *alloc_type_node(type_t type)
     }
     node->node_type = AST_NODE_TYPE;
     node->type = type;
-    return node;
-}
-static ast_node_t *alloc_type_id_node(string_t id)
-{
-    ast_node_t *node = calloc(1, sizeof(ast_node_t));
-    if(node == NULL) {
-        return NULL;
-    }
-    node->node_type = AST_NODE_ID_TYPE_PAIR;
-    node->id_type_pair.id = id;
     return node;
 }
 static ast_node_t *alloc_break_node()
@@ -95,23 +103,24 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
     case T_IDENTIFIER:
         switch(parent_nterm) {
         case NT_FUNC_CALL:
-            (*root)->func_call.name = alloc_id_node(token.string);
+            (*root)->func_call.name = alloc_sym_use_node(token.string);
             break;
         case NT_FUNC_DECL:
-            (*root)->func_decl.name = alloc_id_node(token.string);
+            (*root)->func_decl.name = alloc_sym_decl_node(token.string);
             break;
         case NT_FUNC_DEF:
-            (*root)->func_def.name = alloc_id_node(token.string);
+            (*root)->func_def.name = alloc_sym_decl_node(token.string);
             break;
+        // how do we handle scopes again?
         case NT_FOR_LOOP:
-            (*root)->for_loop.iterator = alloc_id_node(token.string);
+            (*root)->for_loop.iterator = alloc_sym_decl_node(token.string);
             break;
         case NT_IDENTIFIER_WITH_TYPE:
-            last_root = node_list_append(root, alloc_type_id_node(token.string));
+            last_root = node_list_append(root, alloc_sym_decl_node(token.string));
             break;
         case NT_IDENTIFIER_LIST:
         case NT_IDENTIFIER_LIST2:
-            node_list_append(root, alloc_id_node(token.string));
+            node_list_append(root, alloc_sym_use_node(token.string));
             break;
         case NT_STATEMENT:
             // ignore, will be handled once we know if we're in assignment or func-call
@@ -131,7 +140,7 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
             node_list_append(root, alloc_type_node(token.type));
             break;
         case NT_IDENTIFIER_WITH_TYPE:
-            (*last_root)->id_type_pair.type = token.type;
+            (*last_root)->symbol.type = token.type;
             break;
         default:
             error = true;
@@ -213,8 +222,8 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
     case NT_DECLARATION:
         switch((*root)->visited_children++) {
         case 0:
-            return &(*root)->declaration.id_type_pair;
-        case 1:
+        //     return &(*root)->declaration.symbol;
+        // case 1:
             return &(*root)->declaration.assignment;
         }
         break;
@@ -453,7 +462,9 @@ void print_ast(int depth, ast_node_t *root)
         break;
     case AST_NODE_DECLARATION:
         print(depth, "decl:");
-        print_ast(depth + 1, root->declaration.id_type_pair);
+        // print_ast(depth + 1, root->declaration.symbol);
+        symbol_t sym_decl = (root->declaration.symbol.is_declaration) ? root->declaration.symbol : *root->declaration.symbol.declaration;
+        print(depth, "sym: %s: %s (%s)", sym_decl.name, type_to_readable(sym_decl.type), sym_decl.suffix);
         if(root->declaration.assignment) {
             print(depth + 1, "assign:");
             print_ast(depth + 2, root->declaration.assignment);
@@ -475,10 +486,6 @@ void print_ast(int depth, ast_node_t *root)
     case AST_NODE_BODY:
         print(depth, "body:");
         print_ast_list(depth + 1, root->body.statements);
-        break;
-    case AST_NODE_ID_TYPE_PAIR:
-        print(depth, "%s: %s", root->id_type_pair.id.ptr,
-              type_to_readable(root->id_type_pair.type));
         break;
     case AST_NODE_IF:
         print(depth, "if:");
@@ -553,8 +560,9 @@ void print_ast(int depth, ast_node_t *root)
     case AST_NODE_BOOLEAN:
         print(depth, "bool: %s", root->boolean ? "true" : "false");
         break;
-    case AST_NODE_IDENTIFIER:
-        print(depth, "id: %s", root->identifier.ptr);
+    case AST_NODE_SYMBOL:;
+        symbol_t sym = (root->symbol.is_declaration) ? root->symbol : *root->symbol.declaration;
+        print(depth, "sym: (%s%s: %s)", sym.name.ptr, sym.suffix.ptr, type_to_readable(sym.type));
         break;
     case AST_NODE_STRING:
         print(depth, "str: \"%s\"", root->string.ptr);
@@ -593,7 +601,11 @@ void free_ast(ast_node_t *root)
         free_ast(root->func_call.arguments);
         break;
     case AST_NODE_DECLARATION:
-        free_ast(root->declaration.id_type_pair);
+        // can't we just store the symbol in an AST node?
+        if(root->symbol.is_declaration) {
+            str_free(&root->symbol.name);
+            str_free(&root->symbol.suffix);
+        }
         free_ast(root->declaration.assignment);
         break;
     case AST_NODE_ASSIGNMENT:
@@ -625,8 +637,11 @@ void free_ast(ast_node_t *root)
     case AST_NODE_RETURN:
         free_ast(root->return_values.values);
         break;
-    case AST_NODE_IDENTIFIER:
-        str_free(&root->identifier);
+    case AST_NODE_SYMBOL:
+        if(root->symbol.is_declaration) {
+            str_free(&root->symbol.name);
+            str_free(&root->symbol.suffix);
+        }
         break;
     case AST_NODE_STRING:
         str_free(&root->string);
@@ -637,9 +652,6 @@ void free_ast(ast_node_t *root)
         break;
     case AST_NODE_UNOP:
         free_ast(root->unop.operand);
-        break;
-    case AST_NODE_ID_TYPE_PAIR:
-        str_free(&root->id_type_pair.id);
         break;
     case AST_NODE_BREAK:
     case AST_NODE_TYPE:
