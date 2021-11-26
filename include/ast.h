@@ -80,11 +80,23 @@ struct symbol {
         struct {
             type_t type;
             string_t name;
-            string_t suffix;
+            bool used;
+            bool dirty;
+            bool constant;
+            union {
+                string_t string;
+                int64_t integer;
+                double number;
+                bool boolean;
+            };
         };
         symbol_t *declaration;
     };
 };
+
+typedef struct {
+    type_t result;
+} ast_metadata_t;
 
 // declarations of different ast_node types
 typedef struct {
@@ -96,18 +108,24 @@ typedef struct {
     ast_node_list_t statements;
 } ast_body_t;
 
+typedef struct ast_func_def ast_func_def_t;
+
 typedef struct {
     string_t name;
     ast_node_list_t argument_types;
     ast_node_list_t return_types;
+    ast_func_def_t *def;
+    bool used;
 } ast_func_decl_t;
 
-typedef struct {
+struct ast_func_def {
     string_t name;
     ast_node_list_t arguments;
     ast_node_list_t return_types;
     ast_node_t *body;
-} ast_func_def_t;
+    ast_func_decl_t *decl;
+    bool used;
+};
 
 typedef struct {
     ast_node_list_t conditions; // if and elseif conditions
@@ -152,15 +170,18 @@ typedef struct {
     ast_node_binop_type_t type;
     ast_node_t *left;
     ast_node_t *right;
+    ast_metadata_t metadata;
 } ast_binop_t;
 
 typedef struct {
     ast_node_unop_type_t type;
     ast_node_t *operand;
+    ast_metadata_t metadata;
 } ast_unop_t;
 
 typedef struct {
     ast_node_list_t values;
+    ast_func_def_t *def;
 } ast_return_t;
 
 struct ast_node {
