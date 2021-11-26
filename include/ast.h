@@ -133,16 +133,19 @@ struct ast_func_def {
 typedef struct {
     ast_node_list_t conditions; // if and elseif conditions
     ast_node_list_t bodies;     // if, elseif and else bodies (one node longer than conditions)
+    string_t label;
 } ast_if_t;
 
 typedef struct {
     ast_node_t *condition;
     ast_node_t *body;
+    string_t label;
 } ast_while_t;
 
 typedef struct {
     ast_node_t *body;
     ast_node_t *condition;
+    string_t label;
 } ast_repeat_t;
 
 typedef struct {
@@ -151,6 +154,7 @@ typedef struct {
     ast_node_t *condition;
     ast_node_t *step;
     ast_node_t *body;
+    string_t label;
 } ast_for_t;
 
 typedef struct {
