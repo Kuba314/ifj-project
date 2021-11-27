@@ -29,7 +29,6 @@ typedef enum
     SCANNER_STATE_NUMBER,             ///> State for reading integer digits
     SCANNER_STATE_DECIMAL,            ///> State for decimal digits
     SCANNER_STATE_EXPONENT,           ///> State for "e" or "E"
-    SCANNER_STATE_EXPONENT_SIGN,      ///> State for exponent sign (+/-)
     SCANNER_STATE_EXPONENT_VALUE,     ///> State for exponent value, ONLY integer exponent value is
                                       /// accepted
 
@@ -140,6 +139,15 @@ static void identify_keyword(string_t *str, token_t *t)
 
     } else if(!strcmp(str->ptr, "break")) {
         t->token_type = T_BREAK;
+
+    } else if(!strcmp(str->ptr, "not")) {
+        t->token_type = T_NOT;
+
+    } else if(!strcmp(str->ptr, "and")) {
+        t->token_type = T_AND;
+
+    } else if(!strcmp(str->ptr, "or")) {
+        t->token_type = T_OR;
 
     } else {
         t->token_type = T_IDENTIFIER;
