@@ -229,8 +229,6 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
     case NT_DECLARATION:
         switch((*root)->visited_children++) {
         case 0:
-            return root;
-        case 1:
             return &(*root)->declaration.assignment;
         }
         break;
@@ -478,8 +476,8 @@ void print_ast(int depth, ast_node_t *root)
         symbol_t sym_decl = (root->declaration.symbol.is_declaration)
                                 ? root->declaration.symbol
                                 : *root->declaration.symbol.declaration;
-        print(depth, "sym: %s: %s (%s)", sym_decl.name, type_to_readable(sym_decl.type),
-              sym_decl.suffix);
+        print(depth, "sym: %s: %s (%s)", sym_decl.name.ptr, type_to_readable(sym_decl.type),
+              sym_decl.suffix.ptr);
         if(root->declaration.assignment) {
             print(depth + 1, "assign:");
             print_ast(depth + 2, root->declaration.assignment);
