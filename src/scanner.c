@@ -293,6 +293,18 @@ static int _get_next_token(token_t *t)
 
                 state = SCANNER_STATE_TILDE;
 
+            } else if(c == '%') {
+
+                str_free(&str);
+                t->token_type = T_PERCENT;
+                return E_OK;
+
+            } else if(c == '^') {
+
+                str_free(&str);
+                t->token_type = T_CARET;
+                return E_OK;
+
             } else if(c == '+') {
 
                 str_free(&str);
@@ -367,6 +379,9 @@ static int _get_next_token(token_t *t)
                     str_free(&str);
                     return E_INT;
                 }
+            } else {
+                str_free(&str);
+                return E_LEX;
             }
 
             break;
