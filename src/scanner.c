@@ -86,8 +86,7 @@ static void identify_keyword(string_t *str, token_t *t)
         t->token_type = T_GLOBAL;
 
     } else if(!strcmp(str->ptr, "nil")) {
-        t->token_type = T_TYPE;
-        t->type = TYPE_NIL;
+        t->token_type = T_NIL;
 
     } else if(!strcmp(str->ptr, "require")) {
         t->token_type = T_REQUIRE;

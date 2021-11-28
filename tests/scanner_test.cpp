@@ -165,8 +165,7 @@ TEST_F(ScannerInput, KeywordScan)
     EXPECT_EQ(token.token_type, T_LOCAL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
-    EXPECT_EQ(token.token_type, T_TYPE);
-    EXPECT_EQ(token.type, TYPE_NIL);
+    EXPECT_EQ(token.token_type, T_NIL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_REQUIRE);
@@ -496,8 +495,7 @@ TEST_F(ScannerInput, ComplexProgram2)
     EXPECT_EQ(token.token_type, T_DOUBLE_EQUALS);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
-    EXPECT_EQ(token.token_type, T_TYPE);
-    EXPECT_EQ(token.type, TYPE_NIL);
+    EXPECT_EQ(token.token_type, T_NIL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_THEN);
@@ -1061,8 +1059,7 @@ TEST_F(ScannerInput, ComplexProgram3)
     EXPECT_EQ(token.token_type, T_TILDE_EQUALS);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
-    EXPECT_EQ(token.token_type, T_TYPE);
-    EXPECT_EQ(token.type, TYPE_NIL);
+    EXPECT_EQ(token.token_type, T_NIL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_THEN);
