@@ -629,18 +629,22 @@ void free_ast(ast_node_t *root)
         free_ast(root->body.statements);
         break;
     case AST_NODE_IF:
+        str_free(&root->if_condition.label);
         free_ast(root->if_condition.conditions);
         free_ast(root->if_condition.bodies);
         break;
     case AST_NODE_WHILE:
+        str_free(&root->while_loop.label);
         free_ast(root->while_loop.condition);
         free_ast(root->while_loop.body);
         break;
     case AST_NODE_REPEAT:
+        str_free(&root->repeat_loop.label);
         free_ast(root->repeat_loop.condition);
         free_ast(root->repeat_loop.body);
         break;
     case AST_NODE_FOR:
+        str_free(&root->for_loop.label);
         free_ast(root->for_loop.iterator);
         free_ast(root->for_loop.setup);
         free_ast(root->for_loop.condition);
