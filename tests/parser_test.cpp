@@ -325,3 +325,41 @@ TEST_F(ParserTests, HelloWorld)
     EXPECT_EQ(statement_it->next, nullptr);
     EXPECT_EQ(global_it->next, nullptr);
 }
+TEST_F(ParserTests, Nil)
+{
+    InitTest("tests/test_files/nil.tl");
+
+    EXPECT_EQ(ast->node_type, AST_NODE_PROGRAM);
+    ast_node_t *global_it = ast->program.global_statement_list;
+
+    check_node(global_it, AST_NODE_FUNC_DEF);
+    ast_func_def_t func_def = global_it->func_def;
+
+    check_id(func_def.name, "foo");
+    check_arg_names(func_def, NULL);
+    check_arg_types(func_def, TYPE_NIL);
+    check_type_list(func_def.return_types, TYPE_NIL);
+
+    ASSERT_NE(func_def.body, nullptr);
+    EXPECT_EQ(func_def.body->node_type, AST_NODE_BODY);
+    ast_node_t *statement_it = func_def.body->body.statements;
+
+    check_node(statement_it, AST_NODE_DECLARATION);
+    EXPECT_EQ(statement_it->declaration.id_type_pair->id_type_pair.type, TYPE_NIL);
+    EXPECT_EQ(strcmp(statement_it->declaration.id_type_pair->id_type_pair.id.ptr, "x"), 0);
+    check_node(statement_it->declaration.assignment, AST_NODE_NIL);
+
+    statement_it = statement_it->next;
+
+    check_node(statement_it, AST_NODE_ASSIGNMENT);
+    ast_node_t *id_it = statement_it->assignment.identifiers;
+    check_node(id_it, AST_NODE_IDENTIFIER);
+    check_id(id_it, "x");
+    EXPECT_EQ(id_it->next, nullptr);
+
+    ast_node_t *expr_it = statement_it->assignment.expressions;
+    check_node(expr_it, AST_NODE_NIL);
+    EXPECT_EQ(expr_it->next, nullptr);
+
+    EXPECT_EQ(statement_it->next, nullptr);
+}
