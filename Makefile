@@ -74,3 +74,4 @@ clean:
 	rm -rf $(TARGETS) $(ALL_OBJECTS) $(COV_REPORT_FILES)
 	cd $(DOC_DIR) && rm -f 	$(DOC).aux $(DOC).dvi $(DOC).log $(DOC).ps $(DOC).out $(DOC).toc $(DOC).pdf *.log
 	cd $(DOC_DIR) && rm -rf html/
+	rm -f $(DOC).pdf
