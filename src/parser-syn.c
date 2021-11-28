@@ -387,8 +387,15 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
                 return err;
             }
         } else {
-            // try to following token with the expected one
             get_next_token(&token);
+
+            // this parser expects `nil` only as a type
+            if(token.token_type == T_NIL) {
+                token.token_type = T_TYPE;
+                token.type = TYPE_NIL;
+            }
+
+            // try to following token with the expected one
             if(token.token_type != expected.term) {
                 fprintf(stderr, "error: parser: expected \"%s\", but got \"%s\"\n",
                         term_to_readable(expected.term), term_to_readable(token.token_type));
