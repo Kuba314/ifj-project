@@ -617,6 +617,9 @@ static int _get_next_token(token_t *t)
 
                 str_free(&str);
                 str_create_empty(&str);
+            } else if(c == EOF) {
+                str_free(&str);
+                return E_LEX;
             }
             break;
 
