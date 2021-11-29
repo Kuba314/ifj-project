@@ -1206,6 +1206,9 @@ void check_for_conversion(){
 
     OUTPUT_CODE_LINE("JUMPIFEQ TYPES_OK GF@type1 GF@type2");
 
+    OUTPUT_CODE_LINE("JUMPIFEQ TYPES_OK GF@type1 string@nil");
+    OUTPUT_CODE_LINE("JUMPIFEQ TYPES_OK GF@type2 string@nil");
+
     OUTPUT_CODE_LINE("JUMPIFEQ FIRST_OP_INT GF@type1 string@int");
     OUTPUT_CODE_LINE("JUMPIFEQ SEC_OP_INT GF@type2 string@int");
 
@@ -1215,6 +1218,7 @@ void check_for_conversion(){
 
     OUTPUT_CODE_LINE("LABEL SEC_OP_INT");
     OUTPUT_CODE_LINE("INT2FLOAT GF@op2 GF@op2"); 
+    OUTPUT_CODE_LINE("JUMP TYPES_OK");
 
     OUTPUT_CODE_LINE("LABEL TYPES_OK");
     OUTPUT_CODE_LINE("PUSHS GF@op1");
