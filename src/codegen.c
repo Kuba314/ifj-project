@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
+
 #define OUTPUT_CODE_LINE(code) \
     printf("%s\n",code)
 
@@ -16,18 +17,34 @@
 #define COMMENT(comm) \
     printf("#%s\n",comm)
 
+void exponent_float_to_integer(){
+    OUTPUT_CODE_LINE("LABEL FLOAT_TO_INT_EXPONENT");
+    OUTPUT_CODE_LINE("POPS GF@result");
 
+    OUTPUT_CODE_LINE("PUSHS GF@RESULT");
+    OUTPUT_CODE_LINE("RETURN");
+
+}
 
 /*
+LABEL EXPONENTIATION
 POPS GF@exponent
 POPS GF@base
 
-TYPE GF@op1 GF@base
-TYPE GF@op2 GF@exponent
+TYPE GF@type1 GF@base
+TYPE GF@type2 GF@exponent
+
+JUMPIFEQ string@float GF@type2
+
+LABEL EXPONENT_FLOAT
+EXIT 
+
+
 
 
 LABEL ZERO_ZERO
 PUSH int@1
+RETURN
 
 */
 
@@ -75,7 +92,7 @@ if exponent<0:
 #include <stdio.h>
 #include "ctype.h"
 
-char s2[] = {"retezec s lomitkem \\ a novym#radkem"};
+void look_for_declarations(ast_node_t *root);
 
 void process_string(char *s)
 {
@@ -288,6 +305,7 @@ bool generate_func_end(char *function_name)
     EMPTY_LINE;
 }
 
+
 void process_node_func_def(ast_node_t *cur_node){
     //printf("Processing func def node.\n");
     generate_func_start(cur_node->func_def.name.ptr);
@@ -309,6 +327,7 @@ void process_node_func_def(ast_node_t *cur_node){
         retval_counter++;
     }
 
+    look_for_declarations(cur_node->func_def.body);
     process_node(cur_node->func_def.body);
 
     generate_func_end(cur_node->func_def.name.ptr);
@@ -480,26 +499,32 @@ void process_binop_node(ast_node_t *binop_node){
             break;
         case AST_NODE_BINOP_LT:
             OUTPUT_CODE_LINE("CALL $NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
             OUTPUT_CODE_LINE("LTS");
             break;
         case AST_NODE_BINOP_GT:
             OUTPUT_CODE_LINE("CALL $NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
             OUTPUT_CODE_LINE("GTS");
             break;
         case AST_NODE_BINOP_LTE:
             OUTPUT_CODE_LINE("CALL $NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
             OUTPUT_CODE_LINE("GTS");
             OUTPUT_CODE_LINE("NOTS");
             break;
         case AST_NODE_BINOP_GTE:
             OUTPUT_CODE_LINE("CALL $NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
             OUTPUT_CODE_LINE("LTS");
             OUTPUT_CODE_LINE("NOTS");
             break;
         case AST_NODE_BINOP_EQ:
+            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
             OUTPUT_CODE_LINE("EQS");
             break;
         case AST_NODE_BINOP_NE:
+            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
             OUTPUT_CODE_LINE("EQS");
             OUTPUT_CODE_LINE("NOTS");
             break;
@@ -656,9 +681,12 @@ void generate_move(symbol_t * symbol){
 
 
 
-void process_declaration_node(ast_node_t *cur_node){
+void process_declaration_node(ast_node_t *cur_node, bool is_in_loop){
     ast_node_t * rvalue = cur_node->declaration.assignment;
-    generate_declaration(&cur_node->declaration.symbol);
+    if (is_in_loop){
+        generate_declaration(&cur_node->declaration.symbol);
+        return;
+    }
     if (!rvalue){
         generate_move(&cur_node->declaration.symbol);
         generate_nil_assignment(); //done
@@ -956,11 +984,11 @@ void process_node(ast_node_t *cur_node){
         case AST_NODE_FUNC_CALL:
             process_node_func_call(cur_node);
             break;
-
+        
         case AST_NODE_DECLARATION:
-            process_declaration_node(cur_node);
+            process_declaration_node(cur_node,false);
             break;
-
+        
         case AST_NODE_ASSIGNMENT:
             process_assignment_node(cur_node);
             break;
@@ -988,6 +1016,44 @@ void process_node(ast_node_t *cur_node){
             break;
     }
 }
+
+void look_for_declarations(ast_node_t *root)
+{
+    switch(root->node_type) {
+    case AST_NODE_DECLARATION:
+        process_declaration_node(root,true);
+        break;
+    case AST_NODE_BODY:
+        {
+        ast_node_t *body_statement = root->body.statements;
+        while (body_statement){
+            look_for_declarations(body_statement);
+            body_statement=body_statement->next;
+        }
+        break;
+        }
+    case AST_NODE_IF:
+        {
+            ast_node_list_t bodies = root->if_condition.bodies;
+            while(bodies) {
+                look_for_declarations(bodies);
+                bodies = bodies->next;
+            }
+        }
+        break;
+    case AST_NODE_WHILE:
+        look_for_declarations(root->while_loop.body);
+        break;
+    case AST_NODE_REPEAT:
+        look_for_declarations(root->repeat_loop.body);
+        break;
+    case AST_NODE_FOR:
+        look_for_declarations(root->for_loop.iterator);
+        look_for_declarations(root->for_loop.body);
+        break;
+    }
+}
+
 
 void generate_reads(){
     OUTPUT_CODE_LINE("LABEL $reads");
