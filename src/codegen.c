@@ -26,92 +26,11 @@ void exponent_float_to_integer(){
 
 }
 
-/* GF@loop_iterator
-LABEL EXPONENTIATION
-POPS GF@exponent
-POPS GF@base
-
-TYPE GF@type1 GF@base
-TYPE GF@type2 GF@exponent
-
-JUMPIFEQ EXPONENT_FLOAT string@float GF@type2   if e is float (unsupported)
-
-JUMPIFEQ FLOAT_BASE string@float GF@type1       if base is float, dont convert to float, otherwise convert it if it is integer
-INT2FLOAT gf@op1 gf@op1
-
-LABEL FLOAT_BASE
-JUMPIFEQ EXP_ZERO GF@exponent float@0x0p+0             if e == 0 in b^e
-LT GF@stackresult GF@exponent int@0                   // If exponent is smaller than zero, stackresult is true
-JUMPIFEQ POS_EXPONENT GF@stack_result bool@false      // Exponent is positive
-MUL GF@exponent int@-1                                // Negative exponent is turned to positive
-LABEL POS_EXPONENT
-
-
-MOVE GF@result GF@base
-SUB GF@exponent GF@exponent int@1                       if exponent is 3, i only want to multiply the original value 2 times.
-PUSHS GF@result
-
-LABEL EXP_LOOP_START
-
-MOVE GF@loop_iterator int@0                            for (int i = 0;...
-PUSHS GF@exponent
-MULS
-ADD GF@loop_iterator int@1                              i++;)
-JUMPIFEQ EXP_LOOP_END GF@loop_iterator GF@exponent      ...i<(base i - 1);
-JUMP EXP_LOOP_START
-
-
-LABEL EXPONENT_FLOAT
-EXIT int@6
-
-
-LABEL EXP_ZERO
-JUMPIFEQ ZERO_ZERO GF@base int@0    0^0 is invalid
-MOVE GF@result int@1                a^0 where a != 0 is equal to 1.
-RETURN
-
-
-LABEL ZERO_ZERO  
-EXIT int@6
-
-*/
-
-
 /*
 FOR
 BREAK
-^
-
-MOCNINA a^b
-stack = a, b (napravo je top); a*a*a*...*a b-times
-pops GF@exponent
-pops GF@base
-
-if base == 0 and exponent == 0:
-    EXIT int@8
-
-if base!=0 and exponent == 0 : 
-    move GF@result int@1; 
-    pushs GF@result
-
-if exponent>0: 
-    move GF@result GF@base;
-    PUSH GF@result ;; stack = 4
-    for (int i = 0; i<b):
-        PUSH GF@base     stack = 4, 4 ;;; stack = 16,4
-        MULS;            stack = 16   ;;;
-
-4^2
-if exponent<0:
-    move GF@result GF@base;
-    PUSH GF@result ;; stack = 4
-    for (int i = 0; i<GF@base):
-        PUSH GF@base     stack = 4, 4 ;;; stack = 16,4
-        MULS;            stack = 16   ;;;
-    POPS GF@result       stack = empty;
-    PUSHS int@1          stack = 1
-    PUSHS GF@result      stack = 16
-    DIVS                 stack = 1/16
+Odmocnina so zapornym exponentom.
+Call in call
 
 */
 
@@ -119,6 +38,7 @@ if exponent<0:
 #include "ctype.h"
 
 void look_for_declarations(ast_node_t *root);
+void process_node_func_call(ast_node_t *cur_node);
 
 void process_string(char *s)
 {
@@ -217,7 +137,7 @@ void push_nil_arg(){
 }
 
 void check_nil_write(){
-        OUTPUT_CODE_LINE("LABEL $nil_write");
+        OUTPUT_CODE_LINE("LABEL nil_write");
         OUTPUT_CODE_LINE("POPS GF@op1");
         OUTPUT_CODE_LINE("TYPE GF@type1 GF@op1");
         OUTPUT_CODE_LINE("JUMPIFEQ IS_NIL string@nil GF@type1");
@@ -233,75 +153,13 @@ void check_nil_write(){
 void generate_write(int arg_count){
     for(int i = 0;i<arg_count;i++){
         OUTPUT_CODE_PART("PUSHS TF@%");printf("%d\n",i);
-        OUTPUT_CODE_LINE("CALL $nil_write");
+        OUTPUT_CODE_LINE("CALL nil_write");
         OUTPUT_CODE_PART("POPS TF@%");printf("%d\n",i);
     }
 }
 
 //def func (a, b)
 // func(foo()); TODO - nefunguju argumenty
-void process_node_func_call(ast_node_t *cur_node)
-{   
-    OUTPUT_CODE_LINE("CREATEFRAME"); //printf("%s\n",cur_node->func_call.name.ptr);
-    int arg_count = count_children(cur_node->func_call.arguments);
-    ast_node_t *cur_argument = cur_node->func_call.arguments;
-    for (int i = 0;i<arg_count;i++){
-        switch(cur_argument->node_type){
-            case AST_NODE_INTEGER:
-                generate_func_call_argument_push(i);
-                push_integer_arg(cur_argument->integer);
-                break;
-            case AST_NODE_NUMBER:
-                generate_func_call_argument_push(i);
-                push_number_arg(cur_argument->number);
-                break;
-            case AST_NODE_BOOLEAN:
-                generate_func_call_argument_push(i);
-                push_bool_arg(cur_argument->boolean);
-                break;
-            case AST_NODE_SYMBOL:
-                generate_func_call_argument_push(i);
-                push_id_arg(&cur_argument->symbol);
-                break;
-            case AST_NODE_STRING:
-                generate_func_call_argument_push(i);
-                push_string_arg(cur_argument->string.ptr); 
-                break;
-            case AST_NODE_NIL:
-                generate_func_call_argument_push(i);
-                push_nil_arg();
-                break;
-            case AST_NODE_FUNC_CALL:
-                process_node_func_call(cur_argument); //TODO Func call v returne
-                int children = count_children(cur_argument->func_call.arguments);
-                for(int k = 0; k< children;k++){
-                    generate_func_call_argument_push(i); printf("TF@retval%d\n",k);
-                    i++;
-                }
-                break;
-            case AST_NODE_UNOP:
-                process_unop_node(cur_argument);
-                OUTPUT_CODE_LINE("POPS GF@result");
-                generate_func_call_argument_push(i);
-                generate_result();
-                break;
-            case AST_NODE_BINOP:
-                process_binop_node(cur_argument);
-                OUTPUT_CODE_LINE("POPS GF@result");
-                generate_func_call_argument_push(i);
-                generate_result();
-                break;
-        }
-        cur_argument=cur_argument->next;
-    }
-    //if not write
-    if (strcmp(cur_node->func_call.name.ptr,"write")){
-        OUTPUT_CODE_PART("CALL $"); printf("%s\n",cur_node->func_call.name.ptr);
-    }
-    else{
-        generate_write(arg_count);
-    }
-}
 
 // FUNC CALL GENERATING END
 
@@ -355,9 +213,68 @@ void process_node_func_def(ast_node_t *cur_node){
     global_func_counter++;
     OUTPUT_CODE_LINE("POPFRAME");
     OUTPUT_CODE_LINE("RETURN");
+    EMPTY_LINE;
 
 }
 
+
+void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
+    process_node_func_call(rvalue);
+
+    if (rvalue->next){ //If the func call is not the last in assignment right side, only the first retval is used.
+        OUTPUT_CODE_LINE("PUSHS TF@retval0");
+    }
+
+    if(rvalue->next == NULL){ //We can return more than one value if the last item in list is function and pad with nil if an argument is missing.
+
+        int ret_count = count_children(rvalue->func_call.def->return_types);
+        for (int i = 0; i<ret_count; i++){
+            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",i); //Push all children.
+        }
+        //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
+        for (int k = 0; k<lside_counter-ret_count;k++){            //If need be, pad with nils
+            OUTPUT_CODE_LINE("PUSHS nil@nil"); 
+        }
+    }
+    
+}
+
+//PROCESSING ASSIGNMENT NODE
+
+void generate_integer_push(ast_node_t *rvalue){
+    printf("int@%ld\n",rvalue->integer);
+}
+
+void generate_symbol_push(ast_node_t *rvalue){
+    char * id;
+    char * suffix;
+    get_id_name(&rvalue->symbol,&id,&suffix);
+    printf("LF@%s%%%s\n",id,suffix);
+}
+
+void generate_number_push(ast_node_t *rvalue){
+    printf("float@%a\n",rvalue->number);
+}
+
+
+void generate_bool_push(ast_node_t *rvalue){
+    if (rvalue->boolean==1){
+        printf("bool@true\n");
+    }
+    else{
+        printf("bool@false\n");
+    }
+}
+
+
+void generate_string_push(ast_node_t *rvalue){
+    OUTPUT_CODE_PART("string@"); process_string(rvalue->string.ptr); OUTPUT_CODE_LINE(""); 
+}
+
+
+void generate_nil_push(){
+    printf("nil@nil\n");
+}
 //FUNC DEF GENERATING END
 
 void ret_integer_arg(uint64_t integer){
@@ -399,6 +316,16 @@ void generate_func_def_retval_assign(int i){
 }
 
 void ret_binop_arg(){
+    OUTPUT_CODE_LINE("POPS GF@result");
+}
+
+void generate_binop_assignment(ast_node_t *rvalue){
+    process_binop_node(rvalue);
+    OUTPUT_CODE_LINE("POPS GF@result");
+}
+
+void generate_unop_assignment(ast_node_t *rvalue){
+    process_unop_node(rvalue);
     OUTPUT_CODE_LINE("POPS GF@result");
 }
 
@@ -465,29 +392,29 @@ void process_binop_node(ast_node_t *binop_node){
     }
     switch(binop_node->binop.type){
         case AST_NODE_BINOP_ADD:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("ADDS");
             break;
         case AST_NODE_BINOP_SUB:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("SUBS");
             break;
         case AST_NODE_BINOP_MUL:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("MULS");
             break;
         case AST_NODE_BINOP_DIV:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
-            OUTPUT_CODE_LINE("CALL $float_zerodivcheck");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL float_zerodivcheck");
             OUTPUT_CODE_LINE("DIVS");
             break;
         case AST_NODE_BINOP_INTDIV:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $int_zerodivcheck");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL int_zerodivcheck");
             OUTPUT_CODE_LINE("IDIVS");
             break;
         case AST_NODE_BINOP_MOD:
@@ -501,8 +428,8 @@ void process_binop_node(ast_node_t *binop_node){
             E = A - (A//B)*B
      
             */
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $int_zerodivcheck");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL int_zerodivcheck");
             OUTPUT_CODE_LINE("POPS GF@op2");
             OUTPUT_CODE_LINE("POPS GF@op1"); //Saving A and B
 
@@ -518,45 +445,45 @@ void process_binop_node(ast_node_t *binop_node){
             OUTPUT_CODE_LINE("SUBS");        //Stack = A-B*(A//B)
             break;
         case AST_NODE_BINOP_POWER:
-            //todo
+            OUTPUT_CODE_LINE("CALL EXPONENTIATION");
             break;
         case AST_NODE_BINOP_LT:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("LTS");
             break;
         case AST_NODE_BINOP_GT:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("GTS");
             break;
         case AST_NODE_BINOP_LTE:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("GTS");
             OUTPUT_CODE_LINE("NOTS");
             break;
         case AST_NODE_BINOP_GTE:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("LTS");
             OUTPUT_CODE_LINE("NOTS");
             break;
         case AST_NODE_BINOP_EQ:
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("EQS");
             break;
         case AST_NODE_BINOP_NE:
-            OUTPUT_CODE_LINE("CALL $CONV_CHECK");
+            OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("EQS");
             OUTPUT_CODE_LINE("NOTS");
             break;
         case AST_NODE_BINOP_AND:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
             OUTPUT_CODE_LINE("ANDS");
             break;
         case AST_NODE_BINOP_OR:
-            OUTPUT_CODE_LINE("CALL $NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
             OUTPUT_CODE_LINE("ORS");
             break;
         case AST_NODE_BINOP_CONCAT:
@@ -573,56 +500,60 @@ void generate_result(){
 }
 
 void process_return_node(ast_node_t *return_node){
-    int retval_counter1 = count_children(return_node->return_values.values);
+    int lside_counter = count_children(return_node->return_values.def->return_types); //TODO Sem musim ulozit pocet returnov od rodicovskej funkcie!!!!
+    int rside_counter = 0;
     ast_node_t *cur_retval =return_node->return_values.values;
-    for (int i = 0;i<retval_counter1;i++){
+    for (int i = 0;i<lside_counter;i++){
         switch(cur_retval->node_type){
+            case AST_NODE_SYMBOL:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_symbol_push(cur_retval); //done
+                break;
             case AST_NODE_INTEGER:
-                generate_func_def_retval_assign(i);
-                ret_integer_arg(cur_retval->integer);
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_integer_push(cur_retval); //done
                 break;
             case AST_NODE_NUMBER:
-                generate_func_def_retval_assign(i);
-                ret_number_arg(cur_retval->number);
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_number_push(cur_retval); //done
                 break;
             case AST_NODE_BOOLEAN:
-                generate_func_def_retval_assign(i);
-                ret_bool_arg(cur_retval->boolean);
-                break;
-            case AST_NODE_SYMBOL:
-                generate_func_def_retval_assign(i);
-                ret_id_arg(&cur_retval->symbol); 
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_bool_push(cur_retval); //done
                 break;
             case AST_NODE_STRING:
-                generate_func_def_retval_assign(i);
-                ret_string_arg(cur_retval->string.ptr); 
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_string_push(cur_retval); //done
                 break;
             case AST_NODE_NIL:
-                generate_func_def_retval_assign(i);
-                ret_nil_arg();
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_nil_push(); //done
                 break;
             case AST_NODE_FUNC_CALL:
-                process_node_func_call(cur_retval); //TODO Func call v returne
-                int children = count_children(cur_retval->func_call.def->return_types);
-                for(int k = 0; k< children && i < retval_counter1;k++){
-                    generate_func_def_retval_assign(i); printf("TF@retval%d\n",k);
-                    i++;
-                }
+                //printf("\n\nThere is a func call node in return node body.\n\n");
+                generate_func_call_assignment(cur_retval,lside_counter-rside_counter);
                 break;
             case AST_NODE_BINOP:
-                process_binop_node(cur_retval);
-                ret_binop_arg();
-                generate_func_def_retval_assign(i);
+                generate_binop_assignment(cur_retval);
+                OUTPUT_CODE_PART("PUSHS ");
                 generate_result();
                 break;
-            case AST_NODE_UNOP:
-                process_unop_node(cur_retval);
-                ret_binop_arg();
-                generate_func_def_retval_assign(i);
+             case AST_NODE_UNOP:
+                generate_unop_assignment(cur_retval);
+                OUTPUT_CODE_PART("PUSHS ");
                 generate_result();
                 break;
         }
+        rside_counter++;
         cur_retval=cur_retval->next;
+    }
+
+    for(int j = 0; j<rside_counter-lside_counter;j++){
+        OUTPUT_CODE_LINE("POPS GF@trash"); //Losing unwanted expression results.
+    }
+    for(int l = 0; l<lside_counter;l++){
+        OUTPUT_CODE_LINE("POPS GF@result");
+        printf("MOVE LF@retval%d GF@result\n",lside_counter-1-l);
     }
     OUTPUT_CODE_LINE("POPFRAME");
     OUTPUT_CODE_LINE("RETURN");
@@ -667,41 +598,12 @@ void generate_nil_assignment(){
 }
 
 
-void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
-    process_node_func_call(rvalue);
-
-    if (rvalue->next){ //If the func call is not the last in assignment right side, only the first retval is used.
-        OUTPUT_CODE_LINE("PUSHS TF@retval0");
-    }
-
-    if(rvalue->next == NULL){ //We can return more than one value if the last item in list is function and pad with nil if an argument is missing.
-
-        int ret_count = count_children(rvalue->func_call.def->return_types);
-        for (int i = 0; i<ret_count; i++){
-            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",i); //Push all children.
-        }
-        //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
-        for (int k = 0; k<lside_counter-ret_count;k++){            //If need be, pad with nils
-            OUTPUT_CODE_LINE("PUSHS nil@nil"); 
-        }
-    }
-    
-}
 
 void generate_func_call_assignment_decl(ast_node_t *rvalue){
     process_node_func_call(rvalue);
     OUTPUT_CODE_LINE("MOVE GF@result TF@retval0");
 }
 
-void generate_binop_assignment(ast_node_t *rvalue){
-    process_binop_node(rvalue);
-    OUTPUT_CODE_LINE("POPS GF@result");
-}
-
-void generate_unop_assignment(ast_node_t *rvalue){
-    process_unop_node(rvalue);
-    OUTPUT_CODE_LINE("POPS GF@result");
-}
 
 
 void generate_declaration(symbol_t  * symbol){
@@ -778,42 +680,6 @@ void process_declaration_node(ast_node_t *cur_node, bool is_in_loop){
 }
 
 
-//PROCESSING ASSIGNMENT NODE
-
-void generate_integer_push(ast_node_t *rvalue){
-    printf("int@%ld\n",rvalue->integer);
-}
-
-void generate_symbol_push(ast_node_t *rvalue){
-    char * id;
-    char * suffix;
-    get_id_name(&rvalue->symbol,&id,&suffix);
-    printf("LF@%s%%%s\n",id,suffix);
-}
-
-void generate_number_push(ast_node_t *rvalue){
-    printf("float@%a\n",rvalue->number);
-}
-
-
-void generate_bool_push(ast_node_t *rvalue){
-    if (rvalue->boolean==1){
-        printf("bool@true\n");
-    }
-    else{
-        printf("bool@false\n");
-    }
-}
-
-
-void generate_string_push(ast_node_t *rvalue){
-    OUTPUT_CODE_PART("string@"); process_string(rvalue->string.ptr); OUTPUT_CODE_LINE(""); 
-}
-
-
-void generate_nil_push(){
-    printf("nil@nil\n");
-}
 
 
 
@@ -893,6 +759,77 @@ void process_assignment_node(ast_node_t *cur_node){
         cur_max--;
     }
 }
+
+void process_node_func_call(ast_node_t *cur_node)
+{   
+    int lside_counter = count_children(cur_node->func_call.arguments); //TODO Sem musim ulozit pocet returnov od POCTU ARGUMENTOV rodicovskej funkcie!!!!
+    int rside_counter = 0;
+    ast_node_t *cur_arg =cur_node->func_call.arguments; //TODO parsovat iny node
+    for (int i = 0;i<lside_counter;i++){
+        switch(cur_arg->node_type){
+            case AST_NODE_SYMBOL:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_symbol_push(cur_arg); //done
+                break;
+            case AST_NODE_INTEGER:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_integer_push(cur_arg); //done
+                break;
+            case AST_NODE_NUMBER:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_number_push(cur_arg); //done
+                break;
+            case AST_NODE_BOOLEAN:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_bool_push(cur_arg); //done
+                break;
+            case AST_NODE_STRING:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_string_push(cur_arg); //done
+                break;
+            case AST_NODE_NIL:
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_nil_push(); //done
+                break;
+            case AST_NODE_FUNC_CALL:
+                generate_func_call_assignment(cur_arg,lside_counter-rside_counter);
+                break;
+            case AST_NODE_BINOP:
+                generate_binop_assignment(cur_arg);
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_result();
+                break;
+             case AST_NODE_UNOP:
+                generate_unop_assignment(cur_arg);
+                OUTPUT_CODE_PART("PUSHS ");
+                generate_result();
+                break;
+        }
+        rside_counter++;
+        cur_arg=cur_arg->next;
+    }
+
+    for(int j = 0; j<rside_counter-lside_counter;j++){
+        OUTPUT_CODE_LINE("POPS GF@trash"); //Losing unwanted expression results.
+    }
+    OUTPUT_CODE_LINE("CREATEFRAME");
+    for(int l = 0; l<lside_counter;l++){
+        //printf("\n\n\n%d %s\n\n\n",l,cur_node->func_call.name.ptr);
+        OUTPUT_CODE_LINE("POPS GF@result");
+        printf("DEFVAR TF@%%%d\n",lside_counter-1-l);
+        printf("MOVE TF@%%%d GF@result\n",lside_counter-1-l);
+    }
+   
+    //if not write
+    if (strcmp(cur_node->func_call.name.ptr,"write")){
+        OUTPUT_CODE_PART("CALL $"); printf("%s\n",cur_node->func_call.name.ptr);
+    }
+    else{
+        generate_write(rside_counter);
+    }
+    EMPTY_LINE;
+}
+
 
 
 void output_label(char * label, int counter){
@@ -1201,7 +1138,7 @@ void check_type(){
 }
 
 void int_zerodivcheck(){
-    OUTPUT_CODE_LINE("LABEL $int_zerodivcheck");
+    OUTPUT_CODE_LINE("LABEL int_zerodivcheck");
     OUTPUT_CODE_LINE("POPS GF@op2");
     OUTPUT_CODE_LINE("JUMPIFEQ $zero_division_int GF@op2 int@0");
     OUTPUT_CODE_LINE("PUSHS GF@op2");
@@ -1212,7 +1149,7 @@ void int_zerodivcheck(){
 }
 
 void float_zerodivcheck(){
-    OUTPUT_CODE_LINE("LABEL $float_zerodivcheck");
+    OUTPUT_CODE_LINE("LABEL float_zerodivcheck");
     OUTPUT_CODE_LINE("POPS GF@op2");
     OUTPUT_CODE_LINE("JUMPIFEQ $zero_division_float GF@op2 float@0x0.0p+0");
     OUTPUT_CODE_LINE("PUSHS GF@op2");
@@ -1222,9 +1159,11 @@ void float_zerodivcheck(){
     OUTPUT_CODE_LINE("RETURN");
 }
 
+
+//TODO Odstranit dolare z volani a definicii MOJICH funkcii (builtin MUSIA mat dolar)
 void nil_check(){
 
-    OUTPUT_CODE_LINE("LABEL $NIL_CHECK");
+    OUTPUT_CODE_LINE("LABEL NIL_CHECK");
     OUTPUT_CODE_LINE("POPS GF@op2");
     OUTPUT_CODE_LINE("POPS GF@op1");
     OUTPUT_CODE_LINE("JUMPIFEQ NIL_FOUND GF@op1 nil@nil");
@@ -1237,7 +1176,7 @@ void nil_check(){
 }
 
 void check_for_conversion(){
-    OUTPUT_CODE_LINE("LABEL $CONV_CHECK");
+    OUTPUT_CODE_LINE("LABEL CONV_CHECK");
     OUTPUT_CODE_LINE("POPS GF@op2");
     OUTPUT_CODE_LINE("POPS GF@op1");
     OUTPUT_CODE_LINE("TYPE GF@type1 GF@op1");
@@ -1335,7 +1274,63 @@ OUTPUT_CODE_LINE("RETURN");
 
 }
 
+void exponentiation(){
+OUTPUT_CODE_LINE("LABEL EXPONENTIATION");
+OUTPUT_CODE_LINE("POPS GF@exponent");
+OUTPUT_CODE_LINE("POPS GF@base");
+OUTPUT_CODE_LINE("TYPE GF@type1 GF@base");
+OUTPUT_CODE_LINE("TYPE GF@type2 GF@exponent");
+
+
+OUTPUT_CODE_LINE("JUMPIFEQ EXPONENT_INT string@int GF@type2");  //if e is float (unsupported)
+OUTPUT_CODE_LINE("FLOAT2INT GF@exponent GF@exponent");
+OUTPUT_CODE_LINE("LABEL EXPONENT_INT");
+
+
+OUTPUT_CODE_LINE("JUMPIFEQ FLOAT_BASE string@float GF@type1");      //if base is float, dont convert to float, otherwise convert it if it is integer
+OUTPUT_CODE_LINE("INT2FLOAT gf@base gf@base");
+
+OUTPUT_CODE_LINE("LABEL FLOAT_BASE");
+OUTPUT_CODE_LINE("JUMPIFEQ EXP_ZERO GF@exponent int@0") ;           // if e == 0 in b^e
+OUTPUT_CODE_LINE("LT GF@stackresult GF@exponent int@0");               // If exponent is smaller than zero, stackresult is true
+OUTPUT_CODE_LINE("JUMPIFEQ POSEXPONENT GF@stackresult bool@false");    // Exponent is positive
+OUTPUT_CODE_LINE("MUL GF@exponent GF@exponent int@-1");                     // Negative exponent is turned to positive
+OUTPUT_CODE_LINE("LABEL POSEXPONENT");
+
+OUTPUT_CODE_LINE("MOVE GF@result GF@base");
+OUTPUT_CODE_LINE("SUB GF@exponent GF@exponent int@1");                    //if exponent is 3, i only want to multiply the original value 2 times.
+OUTPUT_CODE_LINE("PUSHS GF@result");
+
+
+OUTPUT_CODE_LINE("MOVE GF@loop_iterator int@0");                       //for (int i = 0;...
+OUTPUT_CODE_LINE("LABEL EXP_LOOP_START");
+OUTPUT_CODE_LINE("PUSHS GF@base");
+OUTPUT_CODE_LINE("CALL CONV_CHECK");
+OUTPUT_CODE_LINE("MULS");
+OUTPUT_CODE_LINE("ADD GF@loop_iterator GF@loop_iterator int@1");                        // i++;)
+OUTPUT_CODE_LINE("JUMPIFEQ EXP_LOOP_END GF@loop_iterator GF@exponent");     // ...i<(base i - 1);
+OUTPUT_CODE_LINE("JUMP EXP_LOOP_START");
+
+
+
+OUTPUT_CODE_LINE("LABEL EXP_LOOP_END");
+//TODO if stackresult false/true, tak vydel jednotkou
+OUTPUT_CODE_LINE("RETURN");
+
+OUTPUT_CODE_LINE("LABEL EXP_ZERO");
+OUTPUT_CODE_LINE("JUMPIFEQ ZERO_ZERO GF@base float@0x0p+0");    //0^0 is invalid
+OUTPUT_CODE_LINE("MOVE GF@result int@1");               // a^0 where a != 0 is equal to 1.
+OUTPUT_CODE_LINE("PUSHS GF@result");
+OUTPUT_CODE_LINE("RETURN");
+
+
+OUTPUT_CODE_LINE("LABEL ZERO_ZERO");  
+OUTPUT_CODE_LINE("EXIT int@6");
+
+}
+
 void generate_builtin(){
+    //VSTAVANE
     generate_reads();
     EMPTY_LINE;
     generate_readi();
@@ -1349,6 +1344,9 @@ void generate_builtin(){
     generate_ord();
     EMPTY_LINE;
     generate_substring();
+
+
+    //MOJE
     EMPTY_LINE;
     int_zerodivcheck();
     EMPTY_LINE;
@@ -1361,6 +1359,8 @@ void generate_builtin(){
     check_nil_write();
     EMPTY_LINE;
     eval_condition();
+    EMPTY_LINE;
+    exponentiation();
     EMPTY_LINE;
 
 
@@ -1380,6 +1380,8 @@ void generate_header(){
     OUTPUT_CODE_LINE("DEFVAR GF@string0");
     OUTPUT_CODE_LINE("DEFVAR GF@string1");
     OUTPUT_CODE_LINE("DEFVAR GF@loop_iterator");
+    OUTPUT_CODE_LINE("DEFVAR GF@exponent");
+    OUTPUT_CODE_LINE("DEFVAR GF@base");
     OUTPUT_CODE_LINE("JUMP $$main");
     EMPTY_LINE;
     COMMENT("Built-in functions:");
