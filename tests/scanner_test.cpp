@@ -30,15 +30,20 @@ TEST_F(ScannerInput, NumberScan)
     token_t token;
 
     double numbers[] = { 3.14, 3.1, 3123.0000001, 30000.0, 3000.0, 42.4e3, 42.4e+3, 42.4e-3 };
+    int pos_rows[] = { 2, 3, 4, 5, 6, 7, 8, 9 };
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.integer, (int64_t) 123);
     EXPECT_EQ(token.token_type, T_INTEGER);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 1);
 
     for(int i = 0; i < 8; i++) {
         ASSERT_EQ(get_next_token(&token), E_OK);
         EXPECT_EQ(token.number, (double) numbers[i]);
         EXPECT_EQ(token.token_type, T_NUMBER);
+        EXPECT_EQ(token.row, pos_rows[i]);
+        EXPECT_EQ(token.column, 1);
     }
 }
 
@@ -54,6 +59,9 @@ TEST_F(ScannerInput, OperatorScan)
     for(int i = 0; i < 15; i++) {
         ASSERT_EQ(get_next_token(&token), E_OK);
         EXPECT_EQ(token.token_type, terms[i]);
+        // i + 1, because rows are numbered from one
+        EXPECT_EQ(token.row, i + 1);
+        EXPECT_EQ(token.column, 1);
     }
 }
 
@@ -62,10 +70,14 @@ TEST_F(ScannerInput, CommentScan)
     UseFile("tests/scanner_test_files/comments.tl");
     token_t token;
     int64_t ints[] = { 45, 56, 78 };
+    int pos_rows[] = { 4, 5, 8 };
+    int pos_cols[] = { 3, 50, 1 };
 
     for(int i = 0; i < 3; i++) {
         ASSERT_EQ(get_next_token(&token), E_OK);
         EXPECT_EQ(token.integer, ints[i]);
+        EXPECT_EQ(token.row, pos_rows[i]);
+        EXPECT_EQ(token.column, pos_cols[i]);
     }
 }
 
@@ -82,22 +94,32 @@ TEST_F(ScannerInput, StringScan)
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s1), 0);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s2), 0);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 7);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s3), 0);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s4), 0);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s5), 0);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 39);
     str_free(&token.string);
 }
 
@@ -111,10 +133,15 @@ TEST_F(ScannerInput, EscapeScan)
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s1), 0);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 1);
+
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(strcmp(token.string.ptr, s2), 0);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 }
 
@@ -125,70 +152,106 @@ TEST_F(ScannerInput, KeywordScan)
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_DO);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_ELSE);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_END);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_FUNCTION);
+    EXPECT_EQ(token.row, 4);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "_mem"), 0);
+    EXPECT_EQ(token.row, 5);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_GLOBAL);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "globalVariable"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "_alsoGlobalVar156"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 16);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IF);
+    EXPECT_EQ(token.row, 8);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "var_iable"), 0);
+    EXPECT_EQ(token.row, 9);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LOCAL);
+    EXPECT_EQ(token.row, 10);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_NIL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_REQUIRE);
+    EXPECT_EQ(token.row, 12);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_RETURN);
+    EXPECT_EQ(token.row, 13);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_THEN);
+    EXPECT_EQ(token.row, 14);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.row, 15);
+    EXPECT_EQ(token.column, 1);
     EXPECT_EQ(token.token_type, T_WHILE);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.row, 16);
+    EXPECT_EQ(token.column, 1);
     EXPECT_EQ(token.token_type, T_FOR);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "whileend"), 0);
+    EXPECT_EQ(token.row, 17);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_EOF);
+    EXPECT_EQ(token.row, 18);
+    EXPECT_EQ(token.column, 1);
 }
 
 TEST_F(ScannerInput, ComplexProgram1)
@@ -198,190 +261,290 @@ TEST_F(ScannerInput, ComplexProgram1)
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_REQUIRE);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_STRING);
     EXPECT_EQ(strcmp(token.string.ptr, "ifj21"), 0);
+    EXPECT_EQ(token.row, 1);
+    EXPECT_EQ(token.column, 9);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_FUNCTION);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "concat"), 0);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 10);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LPAREN);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 17);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "x"), 0);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 18);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COLON);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 20);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_TYPE);
     EXPECT_EQ(token.type, TYPE_STRING);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 22);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COMMA);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 28);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "y"), 0);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 30);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COLON);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 32);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_TYPE);
     EXPECT_EQ(token.type, TYPE_STRING);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 34);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_RPAREN);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 40);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COLON);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 42);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_TYPE);
     EXPECT_EQ(token.type, TYPE_STRING);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 44);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COMMA);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 50);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_TYPE);
     EXPECT_EQ(token.type, TYPE_INTEGER);
+    EXPECT_EQ(token.row, 2);
+    EXPECT_EQ(token.column, 52);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_RETURN);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "x"), 0);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 8);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_DOUBLE_DOT);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 10);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "y"), 0);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 13);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COMMA);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 14);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.integer, (int64_t) 0);
     EXPECT_EQ(token.token_type, T_INTEGER);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 16);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_END);
+    EXPECT_EQ(token.row, 3);
+    EXPECT_EQ(token.column, 18);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_FUNCTION);
+    EXPECT_EQ(token.row, 4);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "main"), 0);
+    EXPECT_EQ(token.row, 4);
+    EXPECT_EQ(token.column, 10);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LPAREN);
+    EXPECT_EQ(token.row, 4);
+    EXPECT_EQ(token.column, 14);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_RPAREN);
+    EXPECT_EQ(token.row, 4);
+    EXPECT_EQ(token.column, 15);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LOCAL);
+    EXPECT_EQ(token.row, 5);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "x"), 0);
+    EXPECT_EQ(token.row, 5);
+    EXPECT_EQ(token.column, 7);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COLON);
+    EXPECT_EQ(token.row, 5);
+    EXPECT_EQ(token.column, 9);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_TYPE);
     EXPECT_EQ(token.type, TYPE_STRING);
+    EXPECT_EQ(token.row, 5);
+    EXPECT_EQ(token.column, 11);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LOCAL);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "ret"), 0);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 7);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COLON);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 10);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_TYPE);
     EXPECT_EQ(token.type, TYPE_INTEGER);
+    EXPECT_EQ(token.row, 6);
+    EXPECT_EQ(token.column, 12);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "x"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COMMA);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 2);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "ret"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 4);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_EQUALS);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 8);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "concat"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 10);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LPAREN);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 16);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_STRING);
     EXPECT_EQ(strcmp(token.string.ptr, "ahoj"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 17);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_COMMA);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 23);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_STRING);
     EXPECT_EQ(strcmp(token.string.ptr, "svete"), 0);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 25);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_RPAREN);
+    EXPECT_EQ(token.row, 7);
+    EXPECT_EQ(token.column, 32);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_END);
+    EXPECT_EQ(token.row, 8);
+    EXPECT_EQ(token.column, 1);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "main"), 0);
+    EXPECT_EQ(token.row, 9);
+    EXPECT_EQ(token.column, 1);
     str_free(&token.string);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_LPAREN);
+    EXPECT_EQ(token.row, 9);
+    EXPECT_EQ(token.column, 5);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_RPAREN);
+    EXPECT_EQ(token.row, 9);
+    EXPECT_EQ(token.column, 6);
 }
 
 TEST_F(ScannerInput, ComplexProgram2)
@@ -495,7 +658,8 @@ TEST_F(ScannerInput, ComplexProgram2)
     EXPECT_EQ(token.token_type, T_DOUBLE_EQUALS);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
-    EXPECT_EQ(token.token_type, T_NIL);
+    EXPECT_EQ(token.token_type, T_TYPE);
+    EXPECT_EQ(token.type, TYPE_NIL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_THEN);

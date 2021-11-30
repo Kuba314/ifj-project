@@ -31,6 +31,7 @@
  */
 typedef struct {
     term_type_t token_type;
+    int row, column;
     union {
         string_t string;
         type_t type;
