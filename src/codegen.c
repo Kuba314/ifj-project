@@ -26,7 +26,7 @@ void exponent_float_to_integer(){
 
 }
 
-/*
+/* GF@loop_iterator
 LABEL EXPONENTIATION
 POPS GF@exponent
 POPS GF@base
@@ -34,24 +34,50 @@ POPS GF@base
 TYPE GF@type1 GF@base
 TYPE GF@type2 GF@exponent
 
-JUMPIFEQ string@float GF@type2
+JUMPIFEQ EXPONENT_FLOAT string@float GF@type2   if e is float (unsupported)
+
+JUMPIFEQ FLOAT_BASE string@float GF@type1       if base is float, dont convert to float, otherwise convert it if it is integer
+INT2FLOAT gf@op1 gf@op1
+
+LABEL FLOAT_BASE
+JUMPIFEQ EXP_ZERO GF@exponent float@0x0p+0             if e == 0 in b^e
+LT GF@stackresult GF@exponent int@0                   // If exponent is smaller than zero, stackresult is true
+JUMPIFEQ POS_EXPONENT GF@stack_result bool@false      // Exponent is positive
+MUL GF@exponent int@-1                                // Negative exponent is turned to positive
+LABEL POS_EXPONENT
+
+
+MOVE GF@result GF@base
+SUB GF@exponent GF@exponent int@1                       if exponent is 3, i only want to multiply the original value 2 times.
+PUSHS GF@result
+
+LABEL EXP_LOOP_START
+
+MOVE GF@loop_iterator int@0                            for (int i = 0;...
+PUSHS GF@exponent
+MULS
+ADD GF@loop_iterator int@1                              i++;)
+JUMPIFEQ EXP_LOOP_END GF@loop_iterator GF@exponent      ...i<(base i - 1);
+JUMP EXP_LOOP_START
+
 
 LABEL EXPONENT_FLOAT
-EXIT 
+EXIT int@6
 
 
-
-
-LABEL ZERO_ZERO
-PUSH int@1
+LABEL EXP_ZERO
+JUMPIFEQ ZERO_ZERO GF@base int@0    0^0 is invalid
+MOVE GF@result int@1                a^0 where a != 0 is equal to 1.
 RETURN
+
+
+LABEL ZERO_ZERO  
+EXIT int@6
 
 */
 
 
 /*
-VOLANIE FUNKCIE V RETURNE
-VOLANIVE FUNKCIE V ARGUMENTE FUNKCIE
 FOR
 BREAK
 ^
@@ -246,7 +272,12 @@ void process_node_func_call(ast_node_t *cur_node)
                 push_nil_arg();
                 break;
             case AST_NODE_FUNC_CALL:
-                //TODO func call v calle
+                process_node_func_call(cur_argument); //TODO Func call v returne
+                int children = count_children(cur_argument->func_call.arguments);
+                for(int k = 0; k< children;k++){
+                    generate_func_call_argument_push(i); printf("TF@retval%d\n",k);
+                    i++;
+                }
                 break;
             case AST_NODE_UNOP:
                 process_unop_node(cur_argument);
@@ -580,6 +611,11 @@ void process_return_node(ast_node_t *return_node){
                 break;
             case AST_NODE_FUNC_CALL:
                 process_node_func_call(cur_retval); //TODO Func call v returne
+                int children = count_children(cur_retval->func_call.def->return_types);
+                for(int k = 0; k< children && i < retval_counter1;k++){
+                    generate_func_def_retval_assign(i); printf("TF@retval%d\n",k);
+                    i++;
+                }
                 break;
             case AST_NODE_BINOP:
                 process_binop_node(cur_retval);
@@ -639,13 +675,23 @@ void generate_nil_assignment(){
 
 void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
     process_node_func_call(rvalue);
-    int ret_count = count_children(rvalue->func_call.def->return_types);
-    for (int i = 0; i<ret_count; i++){
-        OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",i);
+
+    if (rvalue->next){ //If the func call is not the last in assignment right side, only the first retval is used.
+        OUTPUT_CODE_LINE("PUSHS TF@retval0");
     }
-    for (int k = 0; k<lside_counter-ret_count;k++){
-        OUTPUT_CODE_LINE("PUSHS nil@nil");
+
+    if(rvalue->next == NULL){ //We can pad with nil and return more than one value if the last item in list is function.
+
+        int ret_count = count_children(rvalue->func_call.def->return_types);
+        for (int i = 0; i<ret_count; i++){
+            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",i); //Push all children.
+        }
+        //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
+        for (int k = 0; k<lside_counter-ret_count;k++){            //If need be, pad with nils
+            OUTPUT_CODE_LINE("PUSHS nil@nil"); 
+        }
     }
+    
 }
 
 void generate_func_call_assignment_decl(ast_node_t *rvalue){
@@ -814,7 +860,7 @@ void process_assignment_node(ast_node_t *cur_node){
                 generate_nil_push(); //done
                 break;
             case AST_NODE_FUNC_CALL:
-                generate_func_call_assignment(expression,lside_counter);
+                generate_func_call_assignment(expression,lside_counter-rside_counter);
                 break;
             case AST_NODE_BINOP:
                 generate_binop_assignment(expression);
@@ -1339,7 +1385,7 @@ void generate_header(){
     OUTPUT_CODE_LINE("DEFVAR GF@trash");
     OUTPUT_CODE_LINE("DEFVAR GF@string0");
     OUTPUT_CODE_LINE("DEFVAR GF@string1");
-    OUTPUT_CODE_LINE("DEFVAR GF@ifcondtype");
+    OUTPUT_CODE_LINE("DEFVAR GF@loop_iterator");
     OUTPUT_CODE_LINE("JUMP $$main");
     EMPTY_LINE;
     COMMENT("Built-in functions:");
