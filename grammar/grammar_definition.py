@@ -120,9 +120,9 @@ rules: Dict[str, List[List[str]]] = {
     '<func-type-list2>':                [[',', '<type>', '<func-type-list2>'], [EPS]],
 
     # had to add a continuation even if it's not needed here. parser had to know when to allocate body ast node
-    '<statement-list>':             [['<statement>', '<statement-list2>'], [EPS]],
+    '<statement-list>':             [['<statement>', '<statement-list2>', '<opt-return-statement>'], ['<opt-return-statement>']],
     '<statement-list2>':            [['<statement>', '<statement-list2>'], [EPS]],
-    '<statement>':                  [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<identifier>', '<paren-exp-list-or-id-list2>'], ['<return-statement>'], ['break']],
+    '<statement>':                  [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<identifier>', '<paren-exp-list-or-id-list2>'], ['break']],
     '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>'], ['=', '<expression-list>']],
 
     '<cond-statement>':     [['if', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>']],
@@ -142,6 +142,7 @@ rules: Dict[str, List[List[str]]] = {
     '<expression-list>':        [['<expression>', '<expression-list2>']],
     '<expression-list2>':       [[',', '<expression>', '<expression-list2>'], [EPS]],
 
+    '<opt-return-statement>':   [['<return-statement>'], [EPS]],
     '<return-statement>':       [['return', '<ret-expression-list>']],
     '<ret-expression-list>':    [['<expression>', '<ret-expression-list2>'], [EPS]],
     '<ret-expression-list2>':   [[',', '<expression>', '<ret-expression-list2>'], [EPS]],
@@ -186,8 +187,8 @@ for nt, exps in rules.items():
     if got_eps:
         for follow_token in get_follow(nt, []):
             # prefer expression expansion after return
-            if nt != '<ret-expression-list>':
-                table[nt][follow_token] = [EPS]
+            # if nt != '<ret-expression-list>':
+            table[nt][follow_token] = [EPS]
 
 # change eps terminal to '$' in header signalling end of program
 for expd in table.values():
