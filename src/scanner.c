@@ -57,6 +57,7 @@ typedef enum
 static FILE *fptr;
 static token_t last_tokens[TOKEN_BUF_LENGTH];
 static short unsigned last_token_ix = 0;
+static int row, column;
 
 /**
  * Identifies keyword.
@@ -227,6 +228,8 @@ void scanner_init(FILE *source_file)
 {
     fptr = source_file;
     last_token_ix = 0;
+    row = 1;
+    column = 0;
 }
 
 int scanner_free(void)
@@ -258,12 +261,20 @@ static int _get_next_token(token_t *t)
     while(true) {
 
         c = fgetc(fptr);
+        column++;
 
         switch(state) {
         case SCANNER_STATE_START:
+            t->row = row;
+            t->column = column;
             if(isspace(c)) {
 
                 state = SCANNER_STATE_START;
+
+                if(c == '\n') {
+                    row++;
+                    column = 0;
+                }
 
             } else if(isdigit(c)) {
 
@@ -273,6 +284,7 @@ static int _get_next_token(token_t *t)
                     str_free(&str);
                     return E_INT;
                 }
+
             } else if(c == '<') {
 
                 state = SCANNER_STATE_LESS_THAN;
@@ -414,6 +426,7 @@ static int _get_next_token(token_t *t)
             } else {
 
                 ungetc(c, fptr);
+                column--;
 
                 state = SCANNER_STATE_START;
 
@@ -443,6 +456,7 @@ static int _get_next_token(token_t *t)
 
             } else {
                 ungetc(c, fptr);
+                column--;
 
                 state = SCANNER_STATE_START;
 
@@ -488,6 +502,7 @@ static int _get_next_token(token_t *t)
             } else {
 
                 ungetc(c, fptr);
+                column--;
 
                 state = SCANNER_STATE_START;
 
@@ -523,6 +538,7 @@ static int _get_next_token(token_t *t)
                 return E_OK;
             } else {
                 ungetc(c, fptr);
+                column--;
                 t->token_type = T_LT;
                 return E_OK;
             }
@@ -538,6 +554,7 @@ static int _get_next_token(token_t *t)
                 return E_OK;
             } else {
                 ungetc(c, fptr);
+                column--;
                 t->token_type = T_GT;
                 return E_OK;
             }
@@ -554,6 +571,7 @@ static int _get_next_token(token_t *t)
                 return E_OK;
             } else {
                 ungetc(c, fptr);
+                column--;
                 t->token_type = T_EQUALS;
                 return E_OK;
             }
@@ -569,6 +587,7 @@ static int _get_next_token(token_t *t)
                 return E_OK;
             } else {
                 ungetc(c, fptr);
+                column--;
                 return E_LEX;
             }
             break;
@@ -582,6 +601,7 @@ static int _get_next_token(token_t *t)
                 return E_OK;
             } else {
                 ungetc(c, fptr);
+                column--;
                 t->token_type = T_SLASH;
                 return E_OK;
             }
@@ -594,6 +614,7 @@ static int _get_next_token(token_t *t)
 
             } else {
                 ungetc(c, fptr);
+                column--;
                 str_free(&str);
                 state = SCANNER_STATE_START;
                 t->token_type = T_MINUS;
@@ -614,6 +635,8 @@ static int _get_next_token(token_t *t)
 
             if(c == '\n') {
                 state = SCANNER_STATE_START;
+                row++;
+                column = 0;
 
                 str_free(&str);
                 str_create_empty(&str);
@@ -637,6 +660,9 @@ static int _get_next_token(token_t *t)
 
             if(c == ']') {
                 state = SCANNER_STATE_CLOSING_BRACKET;
+            } else if(c == '\n') {
+                row++;
+                column = 0;
             } else if(c == EOF) {
                 str_free(&str);
                 return E_LEX;
@@ -678,6 +704,10 @@ static int _get_next_token(token_t *t)
                 return E_LEX;
 
             } else {
+                if(c == '\n') {
+                    row++;
+                    column = 0;
+                }
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
@@ -766,6 +796,7 @@ static int _get_next_token(token_t *t)
                 state = SCANNER_STATE_START;
 
                 ungetc(c, fptr);
+                column--;
                 identify_keyword(&str, t);
                 return E_OK;
             }
@@ -778,7 +809,6 @@ int get_next_token(token_t *t)
         *t = last_tokens[--last_token_ix];
         return E_OK;
     }
-
     int ret = _get_next_token(t);
     for(int i = TOKEN_BUF_LENGTH - 1; i > 0; i--) {
         last_tokens[i] = last_tokens[i - 1];
