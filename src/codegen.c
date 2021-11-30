@@ -239,10 +239,10 @@ void generate_write(int arg_count){
 }
 
 //def func (a, b)
-// func(foo());
+// func(foo()); TODO - nefunguju argumenty
 void process_node_func_call(ast_node_t *cur_node)
 {   
-    OUTPUT_CODE_LINE("CREATEFRAME");
+    OUTPUT_CODE_LINE("CREATEFRAME"); //printf("%s\n",cur_node->func_call.name.ptr);
     int arg_count = count_children(cur_node->func_call.arguments);
     ast_node_t *cur_argument = cur_node->func_call.arguments;
     for (int i = 0;i<arg_count;i++){
@@ -328,14 +328,6 @@ void generate_func_retval_dec(int i){
 }
 
 
-bool generate_func_end(char *function_name)
-{
-    OUTPUT_CODE_PART("LABEL $"); OUTPUT_CODE_PART(function_name); OUTPUT_CODE_LINE("%end");
-    OUTPUT_CODE_LINE("POPFRAME");
-    OUTPUT_CODE_LINE("RETURN");
-    EMPTY_LINE;
-}
-
 
 void process_node_func_def(ast_node_t *cur_node){
     //printf("Processing func def node.\n");
@@ -360,9 +352,9 @@ void process_node_func_def(ast_node_t *cur_node){
 
     look_for_declarations(cur_node->func_def.body);
     process_node(cur_node->func_def.body);
-
-    generate_func_end(cur_node->func_def.name.ptr);
     global_func_counter++;
+    OUTPUT_CODE_LINE("POPFRAME");
+    OUTPUT_CODE_LINE("RETURN");
 
 }
 
@@ -632,6 +624,8 @@ void process_return_node(ast_node_t *return_node){
         }
         cur_retval=cur_retval->next;
     }
+    OUTPUT_CODE_LINE("POPFRAME");
+    OUTPUT_CODE_LINE("RETURN");
 }
 
 
@@ -680,7 +674,7 @@ void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
         OUTPUT_CODE_LINE("PUSHS TF@retval0");
     }
 
-    if(rvalue->next == NULL){ //We can pad with nil and return more than one value if the last item in list is function.
+    if(rvalue->next == NULL){ //We can return more than one value if the last item in list is function and pad with nil if an argument is missing.
 
         int ret_count = count_children(rvalue->func_call.def->return_types);
         for (int i = 0; i<ret_count; i++){
