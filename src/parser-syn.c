@@ -177,10 +177,10 @@ static ast_node_type_t nterm_to_ast_type(nterm_type_t nterm_type)
         return AST_NODE_FOR;
     case NT_REPEAT_UNTIL:
         return AST_NODE_REPEAT;
-    case NT_RETURN_STATEMENT:
-        return AST_NODE_RETURN;
     case NT_STATEMENT_LIST:
         return AST_NODE_BODY;
+    case NT_RETURN_STATEMENT:
+        return AST_NODE_RETURN;
     default:
         return AST_NODE_INVALID;
     }
@@ -285,21 +285,22 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
             return &(*root)->for_loop.body;
         }
         break;
+    case NT_STATEMENT_LIST:
+        return &(*root)->body.statements;
     case NT_RETURN_STATEMENT:
         return &(*root)->return_values.values;
-    case NT_STATEMENT_LIST:
-        return node_list_tail(&(*root)->body.statements);
+
     // case NT_IDENTIFIER_WITH_TYPE:
     // case NT_DECL_OPTIONAL_ASSIGNMENT:
     // case NT_IDENTIFIER_LIST_WITH_TYPES:
     // case NT_TYPE_LIST:
     // case NT_FUNC_TYPE_LIST:
     // case NT_RET_EXPRESSION_LIST:
-
     // case NT_IDENTIFIER_LIST_WITH_TYPES2:
     // case NT_TYPE_LIST2:
     // case NT_FUNC_TYPE_LIST2:
     // case NT_FUN_EXPRESSION_LIST2:
+    case NT_OPT_RETURN_STATEMENT:
     case NT_GLOBAL_STATEMENT_LIST:
     case NT_OPTIONAL_FUN_EXPRESSION_LIST:
     case NT_STATEMENT_LIST2:
@@ -327,6 +328,7 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
 
 int parse(nterm_type_t nterm, ast_node_t **root, int depth)
 {
+    int err;
     print(depth, "expanding %s", nterm_to_readable(nterm));
 
     // call precedence parser if expression encountered
@@ -336,10 +338,8 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
 
     // peek at token
     token_t token;
-    if(get_next_token(&token)) {
-        fprintf(stderr, "error: parser: couldn't read next token while expanding %s\n",
-                nterm_to_readable(nterm));
-        return E_SYN;
+    if((err = get_next_token(&token))) {
+        return err;
     }
 
     // handle func-call special case
@@ -367,7 +367,10 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
     // put token back
     unget_token();
 
-    alloc_nterm(nterm, root, depth);
+    if((err = alloc_nterm(nterm, root, depth))) {
+        fprintf(stderr, "error: couldn't allocate AST node\n");
+        return err;
+    }
 
     // loop over expansions
     for(size_t i = 0; i < exp_list.size; i++) {
@@ -387,7 +390,10 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
                 return err;
             }
         } else {
-            get_next_token(&token);
+            // try to following token with the expected one
+            if((err = get_next_token(&token))) {
+                return err;
+            }
 
             // this parser expects `nil` only as a type
             if(token.token_type == T_NIL) {
@@ -395,14 +401,13 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
                 token.type = TYPE_NIL;
             }
 
-            // try to following token with the expected one
             if(token.token_type != expected.term) {
                 fprintf(stderr, "error: parser: expected \"%s\", but got \"%s\"\n",
                         term_to_readable(expected.term), term_to_readable(token.token_type));
                 return E_SYN;
             } else {
-                if(put_term(root, token, nterm, depth)) {
-                    return E_SYN;
+                if((err = put_term(root, token, nterm, depth))) {
+                    return err;
                 }
             }
         }

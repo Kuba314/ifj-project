@@ -363,3 +363,7 @@ TEST_F(ParserTests, Nil)
 
     EXPECT_EQ(statement_it->next, nullptr);
 }
+TEST_F(ParserTests, Return)
+{
+    InitTest("tests/test_files/returns.tl");
+}
