@@ -13,4 +13,5 @@ require
 return
 then
 while
+for
 whileend

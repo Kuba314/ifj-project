@@ -181,6 +181,9 @@ TEST_F(ScannerInput, KeywordScan)
     EXPECT_EQ(token.token_type, T_WHILE);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
+    EXPECT_EQ(token.token_type, T_FOR);
+
+    ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_IDENTIFIER);
     EXPECT_EQ(strcmp(token.string.ptr, "whileend"), 0);
     str_free(&token.string);
