@@ -148,7 +148,8 @@ static void identify_keyword(string_t *str, token_t *t)
 
     } else if(!strcmp(str->ptr, "or")) {
         t->token_type = T_OR;
-
+    } else if(!strcmp(str->ptr, "for")) {
+        t->token_type = T_FOR;
     } else {
         t->token_type = T_IDENTIFIER;
         t->string = *str;
