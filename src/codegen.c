@@ -757,37 +757,44 @@ void process_assignment_node(ast_node_t *cur_node){
     }
 }
 
-
 void process_node_func_call(ast_node_t *cur_node)
-{                                                                           //TODO definicia moze byt null, treba zmenit toto volanie pre count_children
-    int lside_counter = count_children(cur_node->func_call.def->arguments); //TODO Sem musim ulozit pocet returnov od POCTU ARGUMENTOV rodicovskej funkcie!!!!
+{   
+    int lside_counter;
+    if (strcmp(cur_node->func_call.name.ptr,"write")){ //If it's not write()
+        lside_counter = count_children(cur_node->func_call.def->arguments);
+    }
+    else{ //If it's write()
+        
+        lside_counter = count_children(cur_node->func_call.arguments);
+    }
+     //TODO Sem musim ulozit pocet returnov od POCTU ARGUMENTOV rodicovskej funkcie!!!!
     int rside_counter = 0;
     ast_node_t *cur_arg =cur_node->func_call.arguments; 
     for (int i = 0;i<lside_counter;i++){
         switch(cur_arg->node_type){
             case AST_NODE_SYMBOL:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_symbol_push(cur_arg); 
+                generate_symbol_push(cur_arg); //done
                 break;
             case AST_NODE_INTEGER:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_integer_push(cur_arg); 
+                generate_integer_push(cur_arg); //done
                 break;
             case AST_NODE_NUMBER:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_number_push(cur_arg); 
+                generate_number_push(cur_arg); //done
                 break;
             case AST_NODE_BOOLEAN:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_bool_push(cur_arg); 
+                generate_bool_push(cur_arg); //done
                 break;
             case AST_NODE_STRING:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_string_push(cur_arg); 
+                generate_string_push(cur_arg); //done
                 break;
             case AST_NODE_NIL:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_nil_push(); 
+                generate_nil_push(); //done
                 break;
             case AST_NODE_FUNC_CALL:
                 generate_func_call_assignment(cur_arg,lside_counter-rside_counter);
@@ -806,6 +813,7 @@ void process_node_func_call(ast_node_t *cur_node)
         rside_counter++;
         cur_arg=cur_arg->next;
     }
+
     for(int j = 0; j<rside_counter-lside_counter;j++){
         OUTPUT_CODE_LINE("POPS GF@trash"); //Losing unwanted expression results.
     }
