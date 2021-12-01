@@ -338,7 +338,7 @@ void process_unop_node(ast_node_t *unop_node){
         case AST_NODE_UNOP_NEG:
             process_binop_node(unop_node->unop.operand);
             OUTPUT_CODE_LINE("PUSHS int@-1");
-            OUTPUT_CODE_LINE("CALL nil_check");
+            OUTPUT_CODE_LINE("CALL NIL_CHECK");
             OUTPUT_CODE_LINE("CALL CONV_CHECK");
             OUTPUT_CODE_LINE("MULS");
             break;
@@ -764,7 +764,7 @@ void process_node_func_call(ast_node_t *cur_node)
         lside_counter = count_children(cur_node->func_call.def->arguments);
     }
     else{ //If it's write()
-        
+
         lside_counter = count_children(cur_node->func_call.arguments);
     }
      //TODO Sem musim ulozit pocet returnov od POCTU ARGUMENTOV rodicovskej funkcie!!!!
@@ -1292,7 +1292,7 @@ void conv_to_float(){
 
     OUTPUT_CODE_LINE("JUMPIFEQ FIRST_OP_INT_conv GF@type1 string@int");
     OUTPUT_CODE_LINE("JUMPIFEQ SEC_OP_INT_conv GF@type2 string@int");
-
+    OUTPUT_CODE_LINE("JUMP FLOAT_DONE");
     OUTPUT_CODE_LINE("LABEL FIRST_OP_INT_conv");
     OUTPUT_CODE_LINE("INT2FLOAT GF@op1 GF@op1");
     OUTPUT_CODE_LINE("JUMPIFEQ SEC_OP_INT_conv GF@type2 string@int");
