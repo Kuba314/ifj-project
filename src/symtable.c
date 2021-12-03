@@ -121,44 +121,6 @@ ast_node_t *symtable_find_in_current(const char *identifier)
     return find_in_table(&frame->scope, identifier);
 }
 
-int symtable_create_mangled_id(string_t *dest)
-{
-
-    char temp[80];
-    sprintf(temp, "%lu", scopes.size - 1);
-
-    for(char *c = temp; *c != '\0'; ++c) {
-        if(str_append_char(dest, *c) != 0) {
-            return E_INT;
-        }
-    }
-
-    return E_OK;
-}
-
-int symtable_create_mangled_label(string_t *dest)
-{
-    static const char separator = '&';
-
-    if(symtable_create_mangled_id(dest) != E_OK) {
-        return E_INT;
-    }
-    frame_t *frame = deque_front(&scopes);
-    if(!frame) {
-        return E_INT;
-    }
-
-    char temp[80];
-    sprintf(temp, "%c%lu", separator, frame->label_counter);
-
-    for(char *c = temp; *c != '\0'; ++c) {
-        if(str_append_char(dest, *c) != 0) {
-            return E_INT;
-        }
-    }
-    return E_OK;
-}
-
 int symtable_put_symbol(const char *identifier, ast_node_t *data)
 {
     frame_t *frame = deque_front(&scopes);

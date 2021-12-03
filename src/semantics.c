@@ -4,8 +4,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-// todo: labels, forward declarations
-
 #ifdef DBG
 
 static int dbgseverity = 1;
@@ -101,7 +99,11 @@ static int sem_get_type(ast_node_t *node, type_t *dest)
         if(node->symbol.is_declaration) {
             *dest = node->symbol.type;
         } else {
-            *dest = node->symbol.declaration->type;
+            if(node->symbol.declaration) {
+                *dest = node->symbol.declaration->type;
+            } else {
+                return E_INT;
+            }
         }
         break;
     case AST_NODE_INTEGER:
@@ -156,10 +158,12 @@ int get_binop_type(type_t left, type_t right, type_t *result)
 
 int sem_get_func_call_type(ast_node_t *node, type_t *type)
 {
-    if(!node->func_call.def->return_types) {
+    ast_node_t *return_types = node->func_call.def ? node->func_call.def->return_types
+                                                   : node->func_call.decl->return_types;
+    if(!return_types) {
         return E_TYPE_CALL;
     }
-    *type = node->func_call.def->return_types->type;
+    *type = return_types->type;
     return E_OK;
 }
 
@@ -221,16 +225,16 @@ int check_variable(ast_node_t *node, bool read, bool write)
 
         PRINT(3, "Mapped to: %s , %s\n", declaration->name.ptr,
               type_to_readable(declaration->type));
-        str_free(&node->symbol.name);
+        // str_free(&node->symbol.name);
         node->symbol.declaration = declaration;
         node->symbol.is_declaration = false;
 
-        //        if(read) {
-        //            declaration->used = true;
-        //        }
-        //        if(write) {
-        //            declaration->dirty = true;
-        //        }
+        if(read) {
+            declaration->used = true;
+        }
+        if(write) {
+            declaration->dirty = true;
+        }
         (void) read;
         (void) write;
 
@@ -335,6 +339,8 @@ int check_func_call(ast_node_t *node, bool main_body)
 
     ast_func_def_t *def = get_func_def_ref(sym);
     node->func_call.def = def;
+    ast_func_decl_t *decl = get_func_decl_ref(sym);
+    node->func_call.decl = decl;
 
     if(main_body) {
         PRINT(3, "Checking in main body\n");
@@ -362,7 +368,7 @@ int check_func_call(ast_node_t *node, bool main_body)
 
     } else {
         // check arguments and type compatibility
-        ast_node_t *args = def->arguments;
+        ast_node_t *args = def ? def->arguments : decl->argument_types;
         ast_node_t *input = node->func_call.arguments;
         while(input && args) {
             type_t source;
@@ -372,6 +378,7 @@ int check_func_call(ast_node_t *node, bool main_body)
             }
 
             type_t dest;
+            // printf("  Get type of %s\n", input->symbol.name.ptr);
             r = sem_get_type(args, &dest);
             if(r != E_OK) {
                 return r;
@@ -591,37 +598,202 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                     return E_INT;
                 }
 
-                if(str_append_char(&node->for_loop.iterator->symbol.name, '_') != E_OK) {
-                    return E_INT;
-                }
+                ast_node_t *iterator = node->for_loop.iterator;
 
-                int r = check_declared_variable(node->for_loop.iterator->symbol.name.ptr,
-                                                node->for_loop.iterator);
+                int r = check_declared_variable(iterator->symbol.name.ptr, iterator);
                 if(r != E_OK) {
                     return r;
                 }
 
                 type_t type_setup;
+                ast_node_t *setup = node->for_loop.setup;
                 r = check_expression(&node->for_loop.setup, &type_setup);
                 if(r != E_OK) {
                     return r;
                 }
 
                 type_t type_condition;
+                ast_node_t *condition = node->for_loop.condition;
                 r = check_expression(&node->for_loop.condition, &type_condition);
                 if(r != E_OK) {
                     return r;
                 }
 
-                if(node->for_loop.step) {
-                    type_t type_step;
+                type_t type_step;
+                ast_node_t *step = node->for_loop.step;
+                if(step) {
                     r = check_expression(&node->for_loop.step, &type_step);
                     if(r != E_OK) {
                         return r;
                     }
                 }
+
+                if(!is_number_or_integer(type_setup)) {
+                    fprintf(stderr, "Semantic error: incopatible type in for. (setup)\n");
+                    return E_TYPE_EXPR;
+                }
+                if(!is_number_or_integer(type_condition)) {
+                    fprintf(stderr, "Semantic error: incopatible type in for. (condition)\n");
+                    return E_TYPE_EXPR;
+                }
+                if(!is_number_or_integer(type_step)) {
+                    fprintf(stderr, "Semantic error: incopatible type in for. (step)\n");
+                    return E_TYPE_EXPR;
+                }
+
+                type_t for_type = TYPE_INTEGER;
+
+                if(type_setup == TYPE_NUMBER || type_condition == TYPE_NUMBER ||
+                   type_step == TYPE_NUMBER) {
+                    for_type = TYPE_NUMBER;
+                }
+
+                ast_node_t *copy_decl = calloc(1, sizeof(ast_node_t));
+                if(!copy_decl) {
+                    return E_INT;
+                }
+                ast_node_t *iterator_decl = calloc(1, sizeof(ast_node_t));
+                if(!iterator_decl) {
+                    free(copy_decl);
+                    return E_INT;
+                }
+                ast_node_t *condition_decl = calloc(1, sizeof(ast_node_t));
+                if(!condition_decl) {
+                    free(copy_decl);
+                    free(iterator_decl);
+                    return E_INT;
+                }
+                ast_node_t *step_decl = calloc(1, sizeof(ast_node_t));
+                if(!step_decl) {
+                    free(copy_decl);
+                    free(iterator_decl);
+                    free(condition_decl);
+                    return E_INT;
+                }
+
+                iterator->symbol.type = TYPE_INTEGER; // todo
+
+                copy_decl->node_type = AST_NODE_DECLARATION;
+                copy_decl->declaration.symbol = iterator->symbol;
+                copy_decl->declaration.symbol.type = for_type;
+                copy_decl->declaration.assignment = NULL;
+
+                iterator_decl->node_type = AST_NODE_DECLARATION;
+                iterator_decl->declaration.symbol = iterator->symbol;
+                iterator_decl->declaration.symbol.type = for_type;
+                iterator_decl->declaration.symbol.name.ptr = NULL;
+                iterator_decl->declaration.symbol.name.alloc_length = 0;
+                iterator_decl->declaration.symbol.name.length = 0;
+                iterator_decl->declaration.assignment = setup;
+
+                condition_decl->node_type = AST_NODE_DECLARATION;
+                condition_decl->declaration.symbol = iterator->symbol;
+                condition_decl->declaration.symbol.type = for_type;
+                condition_decl->declaration.symbol.name.ptr = NULL;
+                condition_decl->declaration.symbol.name.alloc_length = 0;
+                condition_decl->declaration.symbol.name.length = 0;
+                condition_decl->declaration.assignment = condition;
+
+                step_decl->node_type = AST_NODE_DECLARATION;
+                step_decl->declaration.symbol = iterator->symbol;
+                step_decl->declaration.symbol.type = for_type;
+                step_decl->declaration.symbol.name.ptr = NULL;
+                step_decl->declaration.symbol.name.alloc_length = 0;
+                step_decl->declaration.symbol.name.length = 0;
+
+                if(str_create(iterator->symbol.name.ptr, &iterator_decl->declaration.symbol.name) !=
+                   E_OK) {
+                    free(copy_decl);
+                    free(iterator_decl);
+                    free(condition_decl);
+                    free(step_decl);
+                    return E_INT;
+                }
+                if(str_append_char(&iterator_decl->declaration.symbol.name, '&') != E_OK) {
+                    str_free(&iterator_decl->declaration.symbol.name);
+                    free(copy_decl);
+                    free(iterator_decl);
+                    free(condition_decl);
+                    free(step_decl);
+                    return E_INT;
+                }
+
+                if(str_create(iterator->symbol.name.ptr,
+                              &condition_decl->declaration.symbol.name) != E_OK) {
+                    str_free(&iterator_decl->declaration.symbol.name);
+                    free(copy_decl);
+                    free(iterator_decl);
+                    free(condition_decl);
+                    free(step_decl);
+                    return E_INT;
+                }
+                for(char *c = "&cond"; *c != '\0'; ++c) {
+                    if(str_append_char(&condition_decl->declaration.symbol.name, *c) != E_OK) {
+                        str_free(&iterator_decl->declaration.symbol.name);
+                        str_free(&condition_decl->declaration.symbol.name);
+                        free(copy_decl);
+                        free(iterator_decl);
+                        free(condition_decl);
+                        free(step_decl);
+                        return E_INT;
+                    }
+                }
+
+                if(str_create(iterator->symbol.name.ptr, &step_decl->declaration.symbol.name) !=
+                   E_OK) {
+                    str_free(&iterator_decl->declaration.symbol.name);
+                    str_free(&step_decl->declaration.symbol.name);
+                    free(copy_decl);
+                    free(iterator_decl);
+                    free(condition_decl);
+                    free(step_decl);
+                    return E_INT;
+                }
+                for(char *c = "&step"; *c != '\0'; ++c) {
+                    if(str_append_char(&step_decl->declaration.symbol.name, *c) != E_OK) {
+                        str_free(&iterator_decl->declaration.symbol.name);
+                        str_free(&condition_decl->declaration.symbol.name);
+                        str_free(&step_decl->declaration.symbol.name);
+                        free(copy_decl);
+                        free(iterator_decl);
+                        free(condition_decl);
+                        free(step_decl);
+                        return E_INT;
+                    }
+                }
+
+                if(!step) {
+                    ast_node_t *default_step = calloc(1, sizeof(ast_node_t));
+                    if(!default_step) {
+                        str_free(&iterator_decl->declaration.symbol.name);
+                        str_free(&condition_decl->declaration.symbol.name);
+                        str_free(&step_decl->declaration.symbol.name);
+                        free(copy_decl);
+                        free(iterator_decl);
+                        free(condition_decl);
+                        free(step_decl);
+                        return E_INT;
+                    }
+
+                    if(for_type == TYPE_INTEGER) {
+                        default_step->node_type = AST_NODE_INTEGER;
+                        default_step->integer = 1;
+                    } else {
+                        default_step->node_type = AST_NODE_NUMBER;
+                        default_step->number = 1.0;
+                    }
+                    step_decl->declaration.assignment = default_step;
+                } else {
+                    step_decl->declaration.assignment = step;
+                }
+
+                node->for_loop.iterator = iterator_decl;
+                node->for_loop.setup = copy_decl;
+                node->for_loop.condition = condition_decl;
+                node->for_loop.step = step_decl;
             }
             break;
+
         case AST_NODE_IF:
 
             if(!expected.is_nterm && (expected.term == T_ELSEIF || expected.term == T_ELSE)) {
@@ -658,7 +830,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                 ast_node_t *ids = node->assignment.identifiers;
                 ast_node_t *exp = node->assignment.expressions;
                 while(ids) {
-                    int r = check_variable(ids, false, true);
+                    int r = check_variable(ids, true, true);
                     if(r != E_OK) {
                         return r;
                     }
@@ -847,7 +1019,7 @@ static int check_expression(ast_node_t **node, type_t *type)
         if(r != E_OK) {
             return r;
         }
-        // (*node)->symbol.declaration->used = true;
+        (*node)->symbol.declaration->used = true;
         *type = (*node)->symbol.declaration->type;
         break;
     case AST_NODE_FUNC_CALL:
@@ -1000,6 +1172,10 @@ int check_binop_node(ast_node_t **node, type_t *type)
             type_check_skip = true;
             *type = TYPE_BOOL;
         }
+    } else if((*node)->binop.type == AST_NODE_BINOP_AND ||
+              (*node)->binop.type == AST_NODE_BINOP_OR) {
+        *type = TYPE_BOOL;
+        return E_OK;
     }
 
     if(!type_check_skip) {
@@ -1082,6 +1258,7 @@ static ast_node_t builtin_tointeger = {
     .func_def = { .name.ptr = "tointeger",
                   .arguments = &(ast_node_t){ .node_type = AST_NODE_SYMBOL,
                                               .symbol.type = TYPE_NUMBER,
+                                              .symbol.is_declaration = true,
                                               .next = NULL,
                                               .visited_children = 0 },
                   .return_types = &(ast_node_t){ .node_type = AST_NODE_TYPE,
@@ -1100,14 +1277,17 @@ static ast_node_t builtin_substr = {
                   .arguments =
                       &(ast_node_t){ .node_type = AST_NODE_SYMBOL,
                                      .symbol.type = TYPE_STRING,
+                                     .symbol.is_declaration = true,
                                      .visited_children = 0,
                                      .next =
                                          &(ast_node_t){
                                              .node_type = AST_NODE_SYMBOL,
                                              .symbol.type = TYPE_NUMBER,
+                                             .symbol.is_declaration = true,
                                              .visited_children = 0,
                                              .next = &(ast_node_t){ .node_type = AST_NODE_SYMBOL,
                                                                     .symbol.type = TYPE_NUMBER,
+                                                                    .symbol.is_declaration = true,
                                                                     .next = NULL,
                                                                     .visited_children = 0 },
                                          } },
@@ -1126,9 +1306,11 @@ static ast_node_t builtin_ord = {
     .func_def = { .name.ptr = "ord",
                   .arguments = &(ast_node_t){ .node_type = AST_NODE_SYMBOL,
                                               .symbol.type = TYPE_STRING,
+                                              .symbol.is_declaration = true,
                                               .visited_children = 0,
                                               .next = &(ast_node_t){ .node_type = AST_NODE_SYMBOL,
                                                                      .symbol.type = TYPE_INTEGER,
+                                                                     .symbol.is_declaration = true,
                                                                      .next = NULL,
                                                                      .visited_children = 0 } },
                   .return_types = &(ast_node_t){ .node_type = AST_NODE_TYPE,
@@ -1146,6 +1328,7 @@ static ast_node_t builtin_chr = {
     .func_def = { .name.ptr = "chr",
                   .arguments = &(ast_node_t){ .node_type = AST_NODE_SYMBOL,
                                               .symbol.type = TYPE_INTEGER,
+                                              .symbol.is_declaration = true,
                                               .next = NULL,
                                               .visited_children = 0 },
                   .return_types = &(ast_node_t){ .node_type = AST_NODE_TYPE,

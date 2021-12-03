@@ -803,6 +803,7 @@ static int _get_next_token(token_t *t)
         }
     }
 }
+
 int get_next_token(token_t *t)
 {
     if(last_token_ix) {
