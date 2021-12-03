@@ -31,6 +31,7 @@ FOR
 VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava)
 short circuit expression evaluation
 Zmenit suffixy, ktore su ciselne, na pismenove
+Forward deklaracie funkcii
 */
 
 #include <stdio.h>
@@ -763,7 +764,13 @@ void process_node_func_call(ast_node_t *cur_node)
 {
     int lside_counter;
     if (strcmp(cur_node->func_call.name.ptr,"write")){ //If it's not write()
-        lside_counter = count_children(cur_node->func_call.def->arguments);
+        //TODO forward deklaracie mozu crashovat (asi done?)
+        if (cur_node->func_call.def){
+            lside_counter = count_children(cur_node->func_call.def->arguments);
+        }
+        else{
+            lside_counter = count_children(cur_node->func_call.decl->argument_types);
+        }
     }
     else{ //If it's write()
         //TODO do vysledkov zaratat aj pocet argumentov, ktore vrati funkcia na konci writu
