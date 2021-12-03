@@ -26,9 +26,9 @@ void exponent_float_to_integer(){
 
 }
 
-/*
+/* TODO
 FOR
-BREAK
+VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava)
 */
 
 #include <stdio.h>
@@ -67,7 +67,7 @@ static int global_func_counter=0;
 
 void process_binop_node(ast_node_t *binop_node);
 void process_unop_node(ast_node_t *unop_node);
-void process_node(ast_node_t *cur_node);
+void process_node(ast_node_t *cur_node, int break_label);
 void generate_result();
 
 bool get_id_name(symbol_t * node_symbol, char ** name, char ** suffix){
@@ -127,7 +127,7 @@ void push_id_arg(symbol_t * symbol){
     char * suffix;
     get_id_name(symbol,&name,&suffix);
 
-    printf("LF@%s%%%s\n",name,suffix); 
+    printf("LF@%s%%%s\n",name,suffix);
 }
 void push_nil_arg(){
     printf("nil@nil\n");
@@ -200,7 +200,7 @@ void process_node_func_def(ast_node_t *cur_node){
     }
 
     look_for_declarations(cur_node->func_def.body);
-    process_node(cur_node->func_def.body);
+    process_node(cur_node->func_def.body,0);
     global_func_counter++;
     OUTPUT_CODE_LINE("POPFRAME");
     OUTPUT_CODE_LINE("RETURN");
@@ -224,10 +224,9 @@ void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
         }
         //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
         for (int k = 0; k<lside_counter-ret_count;k++){            //If need be, pad with nils
-            OUTPUT_CODE_LINE("PUSHS nil@nil"); 
+            OUTPUT_CODE_LINE("PUSHS nil@nil");
         }
     }
-    
 }
 
 //PROCESSING ASSIGNMENT NODE
@@ -259,7 +258,7 @@ void generate_bool_push(ast_node_t *rvalue){
 
 
 void generate_string_push(ast_node_t *rvalue){
-    OUTPUT_CODE_PART("string@"); process_string(rvalue->string.ptr); OUTPUT_CODE_LINE(""); 
+    OUTPUT_CODE_PART("string@"); process_string(rvalue->string.ptr); OUTPUT_CODE_LINE("");
 }
 
 
@@ -348,7 +347,9 @@ void process_unop_node(ast_node_t *unop_node){
 void process_binop_node(ast_node_t *binop_node){
     if (binop_node->node_type == AST_NODE_BINOP){
         process_binop_node(binop_node->binop.left);
-        process_binop_node(binop_node->binop.right);
+        //if(binop_node.left_short_circuited){ //TODO Short circuit evaluation
+            process_binop_node(binop_node->binop.right);
+        //}
     }
     else{
         switch(binop_node->node_type){
@@ -356,27 +357,27 @@ void process_binop_node(ast_node_t *binop_node){
                 process_unop_node(binop_node);
                 break;
             case AST_NODE_INTEGER:
-                OUTPUT_CODE_PART("PUSHS ");        
+                OUTPUT_CODE_PART("PUSHS ");
                 ret_integer_arg(binop_node->integer);
                 break;
             case AST_NODE_NUMBER:
-                OUTPUT_CODE_PART("PUSHS ");  
+                OUTPUT_CODE_PART("PUSHS ");
                 ret_number_arg(binop_node->number);
                 break;
             case AST_NODE_BOOLEAN:
-                OUTPUT_CODE_PART("PUSHS ");  
+                OUTPUT_CODE_PART("PUSHS ");
                 ret_bool_arg(binop_node->boolean);
                 break;
             case AST_NODE_SYMBOL:
-                OUTPUT_CODE_PART("PUSHS ");  
+                OUTPUT_CODE_PART("PUSHS ");
                 ret_id_arg(&(binop_node->symbol));
                 break;
             case AST_NODE_STRING:
-                OUTPUT_CODE_PART("PUSHS ");  
+                OUTPUT_CODE_PART("PUSHS ");
                 ret_string_arg(binop_node->string.ptr);
                 break;
             case AST_NODE_NIL:
-                OUTPUT_CODE_PART("PUSHS ");  
+                OUTPUT_CODE_PART("PUSHS ");
                 ret_nil_arg();
                 break;
             case AST_NODE_FUNC_CALL:
@@ -418,12 +419,12 @@ void process_binop_node(ast_node_t *binop_node){
             //MOD
             /*
             A%B = E
-     
+
             A//B = C
             D = C*B
             E = A-D
             E = A - (A//B)*B
-     
+
             */
             OUTPUT_CODE_LINE("CALL NIL_CHECK");
             OUTPUT_CODE_LINE("CALL int_zerodivcheck");
@@ -435,8 +436,8 @@ void process_binop_node(ast_node_t *binop_node){
                                              //Stack top is on the left.
             OUTPUT_CODE_LINE("IDIVS");       //Stack = (A//B)
             OUTPUT_CODE_LINE("PUSHS GF@op2");//Stack = B, (A//B)
-            OUTPUT_CODE_LINE("MULS");        //Stack = B*(A//B) 
-            OUTPUT_CODE_LINE("POPS GF@op2"); //Stack = --; GF@op2 =  B*(A//B) 
+            OUTPUT_CODE_LINE("MULS");        //Stack = B*(A//B)
+            OUTPUT_CODE_LINE("POPS GF@op2"); //Stack = --; GF@op2 =  B*(A//B)
             OUTPUT_CODE_LINE("PUSHS GF@op1");//Stack = A
             OUTPUT_CODE_LINE("PUSHS GF@op2");//Stack = B*(A//B), A
             OUTPUT_CODE_LINE("SUBS");        //Stack = A-B*(A//B)
@@ -758,18 +759,18 @@ void process_assignment_node(ast_node_t *cur_node){
 }
 
 void process_node_func_call(ast_node_t *cur_node)
-{   
+{
     int lside_counter;
     if (strcmp(cur_node->func_call.name.ptr,"write")){ //If it's not write()
         lside_counter = count_children(cur_node->func_call.def->arguments);
     }
     else{ //If it's write()
-
+        //TODO do vysledkov zaratat aj pocet argumentov, ktore vrati funkcia na konci writu
         lside_counter = count_children(cur_node->func_call.arguments);
     }
      //TODO Sem musim ulozit pocet returnov od POCTU ARGUMENTOV rodicovskej funkcie!!!!
     int rside_counter = 0;
-    ast_node_t *cur_arg =cur_node->func_call.arguments; 
+    ast_node_t *cur_arg =cur_node->func_call.arguments;
     for (int i = 0;i<lside_counter;i++){
         switch(cur_arg->node_type){
             case AST_NODE_SYMBOL:
@@ -825,7 +826,7 @@ void process_node_func_call(ast_node_t *cur_node)
         printf("DEFVAR TF@%%%d\n",lside_counter-1-l);
         printf("MOVE TF@%%%d GF@result\n",lside_counter-1-l);
     }
-   
+
     //if not write
     if (strcmp(cur_node->func_call.name.ptr,"write")){
         OUTPUT_CODE_PART("CALL $"); printf("%s\n",cur_node->func_call.name.ptr);
@@ -837,10 +838,6 @@ void process_node_func_call(ast_node_t *cur_node)
 }
 
 
-
-void output_label(char * label, int counter){
-    printf("%%%d%%%s%%%d",global_func_counter,label,counter);
-}
 
 
 void eval_condition(){
@@ -870,83 +867,117 @@ void eval_condition(){
     OUTPUT_CODE_LINE("RETURN");
 }
 
-//GF@ifcondtype
-void generate_if_code(char *label, ast_node_t * condition, ast_node_t * body, int counter){
+/*
 
-    if (condition){
-        process_node(condition);
-    }
-    OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+typedef struct {
+    ast_node_t *iterator;
+    ast_node_t *setup;
+    ast_node_t *condition;
+    ast_node_t *step;
+    ast_node_t *body;
+    string_t label;
+} ast_for_t;
 
-    OUTPUT_CODE_LINE("POPS GF@result");
+*/
 
-    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(label,counter); OUTPUT_CODE_LINE(" GF@result bool@false");
 
-    process_node(body);
-    OUTPUT_CODE_PART("JUMP "); output_label(label,0);OUTPUT_CODE_LINE("");
-    OUTPUT_CODE_PART("LABEL "); output_label(label,counter);OUTPUT_CODE_LINE("");
-
+int global_label_counter = 0;
+void output_label(int label_counter){
+    printf("%%%d",label_counter);
 }
+
+
 
 void process_for_node(ast_node_t * for_node){
 
+
+
 }
 
-void process_if_node(ast_node_t *cur_node){
-    int if_counter = 1;
+
+void generate_if_code(ast_node_t * condition, ast_node_t * body, int local_label_counter, int break_label){
+    global_label_counter++;
+    int internal_label = global_label_counter;
+    process_node(condition,0);
+
+    OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+
+    OUTPUT_CODE_LINE("POPS GF@result");
+
+    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(internal_label); OUTPUT_CODE_LINE(" GF@result bool@false");
+
+    process_node(body,break_label);
+
+    OUTPUT_CODE_PART("JUMP "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("LABEL "); output_label(internal_label);OUTPUT_CODE_LINE("");
+
+}
+
+void process_if_node(ast_node_t *cur_node, int break_label){
+    //inkrementuj label counter
+    global_label_counter++;
+    int local_label_counter = global_label_counter;
+    //lokalna hodnota label counteru
     ast_node_t * condition = cur_node->if_condition.conditions;
     ast_node_t * body = cur_node->if_condition.bodies;
-    char * label = cur_node->if_condition.label.ptr;
     while(condition!=NULL){
-        generate_if_code(label,condition,body,if_counter);
+        generate_if_code(condition,body,local_label_counter,break_label);
         condition=condition->next;
         body=body->next;
-        if_counter++;
     }
     if(body){
-        process_node(body);
+        process_node(body,break_label);
     }
-    OUTPUT_CODE_PART("LABEL "); output_label(label,0);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("LABEL "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
 }
 
 void process_while_node(ast_node_t *cur_node){
+    global_label_counter++;
+    int local_label_counter = global_label_counter;
+    global_label_counter++;
+    int second_local_label_counter = global_label_counter;
+
     ast_node_t * condition = cur_node->while_loop.condition;
     ast_node_t * body = cur_node->while_loop.body;
-    char * label = cur_node->while_loop.label.ptr;
-    OUTPUT_CODE_PART("LABEL "); output_label(label,0);OUTPUT_CODE_LINE("");
-    process_node(condition);
+    OUTPUT_CODE_PART("LABEL "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    process_node(condition,0);
     OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
     OUTPUT_CODE_LINE("POPS GF@result");
-    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(label,1); OUTPUT_CODE_LINE(" GF@result bool@false");
-    process_node(body);
-    OUTPUT_CODE_PART("JUMP "); output_label(label,0);OUTPUT_CODE_LINE("");
-    OUTPUT_CODE_PART("LABEL "); output_label(label,1);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(second_local_label_counter); OUTPUT_CODE_LINE(" GF@result bool@false");
+    process_node(body,second_local_label_counter);
+
+    OUTPUT_CODE_PART("JUMP "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("LABEL "); output_label(second_local_label_counter);OUTPUT_CODE_LINE("");
 }
 
 void process_repeat_until(ast_node_t *cur_node){
+    global_label_counter++;
+    int local_label_counter = global_label_counter;
+    global_label_counter++;
+    int second_local_label_counter = global_label_counter;
+
     ast_node_t * condition = cur_node->repeat_loop.condition;
     ast_node_t * body = cur_node->repeat_loop.body;
-    char * label = cur_node->repeat_loop.label.ptr;
-    OUTPUT_CODE_PART("LABEL "); output_label(label,0);OUTPUT_CODE_LINE("");
-    process_node(body);
-    process_node(condition);
+    OUTPUT_CODE_PART("LABEL "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    process_node(body,second_local_label_counter);
+    process_node(condition,0);
     OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
     OUTPUT_CODE_LINE("POPS GF@result");
-    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(label,1); OUTPUT_CODE_LINE(" GF@result bool@false");
-    OUTPUT_CODE_PART("JUMP "); output_label(label,0);OUTPUT_CODE_LINE("");
-    OUTPUT_CODE_PART("LABEL "); output_label(label,1);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(second_local_label_counter); OUTPUT_CODE_LINE(" GF@result bool@false");
+    OUTPUT_CODE_PART("JUMP "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("LABEL "); output_label(second_local_label_counter);OUTPUT_CODE_LINE("");
 }
 
-void process_node(ast_node_t *cur_node){
+void process_node(ast_node_t *cur_node, int break_label){
     //printf("Processing node\n");
     switch (cur_node->node_type){
         case AST_NODE_INVALID:
             break;
         case AST_NODE_FUNC_DECL:
-            // Declarations are ignored in code generator. 
+            // Declarations are ignored in code generator.
             break;
         case AST_NODE_SYMBOL:
-            OUTPUT_CODE_PART("PUSHS ");  
+            OUTPUT_CODE_PART("PUSHS ");
             ret_id_arg(&(cur_node->symbol));
             break;
         case AST_NODE_INTEGER:
@@ -971,22 +1002,25 @@ void process_node(ast_node_t *cur_node){
         case AST_NODE_FUNC_CALL:
             process_node_func_call(cur_node);
             break;
-        
+
         case AST_NODE_DECLARATION:
             process_declaration_node(cur_node,false);
             break;
-        
+
         case AST_NODE_ASSIGNMENT:
             process_assignment_node(cur_node);
             break;
 
         case AST_NODE_IF:
-            process_if_node(cur_node);
+            process_if_node(cur_node,break_label);
             break;
 
         case AST_NODE_WHILE:
             process_while_node(cur_node);
             break;
+
+        case AST_NODE_FOR:
+            process_for_node(cur_node);
 
         case AST_NODE_RETURN:
             process_return_node(cur_node);
@@ -997,8 +1031,12 @@ void process_node(ast_node_t *cur_node){
             break;
         case AST_NODE_BODY:
             for(ast_node_t *it = cur_node->body.statements; it!=NULL; it = it->next ){
-                process_node(it);
+                process_node(it,break_label);
             }
+            break;
+        case AST_NODE_BREAK:
+            OUTPUT_CODE_LINE("JUMP "), output_label(break_label), printf("\n");
+            break;
         default:
             break;
     }
@@ -1008,6 +1046,7 @@ void look_for_declarations(ast_node_t *root)
 {
     switch(root->node_type) {
     case AST_NODE_DECLARATION:
+        // if not already declared, do this: TODO
         process_declaration_node(root,true);
         break;
     case AST_NODE_BODY:
@@ -1144,7 +1183,7 @@ void generate_ord(){
 }
 
 void check_type(){
-    
+
 }
 
 void int_zerodivcheck(){
@@ -1205,7 +1244,7 @@ void check_for_conversion(){
     OUTPUT_CODE_LINE("JUMP TYPES_OK");
 
     OUTPUT_CODE_LINE("LABEL SEC_OP_INT");
-    OUTPUT_CODE_LINE("INT2FLOAT GF@op2 GF@op2"); 
+    OUTPUT_CODE_LINE("INT2FLOAT GF@op2 GF@op2");
     OUTPUT_CODE_LINE("JUMP TYPES_OK");
 
     OUTPUT_CODE_LINE("LABEL TYPES_OK");
@@ -1299,7 +1338,7 @@ void conv_to_float(){
     OUTPUT_CODE_LINE("JUMP FLOAT_DONE");
 
     OUTPUT_CODE_LINE("LABEL SEC_OP_INT_conv");
-    OUTPUT_CODE_LINE("INT2FLOAT GF@op2 GF@op2"); 
+    OUTPUT_CODE_LINE("INT2FLOAT GF@op2 GF@op2");
     OUTPUT_CODE_LINE("JUMP FLOAT_DONE");
 
     OUTPUT_CODE_LINE("LABEL FLOAT_DONE");
@@ -1389,7 +1428,7 @@ OUTPUT_CODE_LINE("PUSHS GF@result");
 OUTPUT_CODE_LINE("RETURN");
 
 
-OUTPUT_CODE_LINE("LABEL ZERO_ZERO");  
+OUTPUT_CODE_LINE("LABEL ZERO_ZERO");
 OUTPUT_CODE_LINE("EXIT int@6");
 
 }
@@ -1461,7 +1500,7 @@ void process_node_program(ast_node_t *cur_node){
     ast_node_t *top_level_definitions = cur_node->program.global_statement_list;
     while (top_level_definitions){
         if (top_level_definitions->node_type == AST_NODE_FUNC_DEF){
-            process_node(top_level_definitions);
+            process_node(top_level_definitions,0);
         }
         top_level_definitions=top_level_definitions->next;
     }
@@ -1469,11 +1508,13 @@ void process_node_program(ast_node_t *cur_node){
     ast_node_t *top_level_call = cur_node->program.global_statement_list;
     while (top_level_call){
         if (top_level_call->node_type == AST_NODE_FUNC_CALL){
-            process_node(top_level_call);
+            process_node(top_level_call,0);
         }
         top_level_call=top_level_call->next;
     }
 }
+
+
 
 void avengers_assembler(ast_node_t *ast){
     generate_header();
