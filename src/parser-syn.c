@@ -333,7 +333,7 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
     case NT_GLOBAL_STATEMENT:  // wait for certain keyword to distinguish asts
         return root;
     default:
-        printf("warn: fall through %s\n", nterm_to_readable(nterm));
+        fprintf(stderr, "warn: fall through %s\n", nterm_to_readable(nterm));
         return root;
     }
     fprintf(stderr, "error: parser-int: unknown nterm_ref of %s\n", nterm_to_readable(nterm));
@@ -343,6 +343,7 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
 int parse(nterm_type_t nterm, ast_node_t **root, int depth)
 {
     int err;
+
     print(depth, "expanding %s", nterm_to_readable(nterm));
 
     // call precedence parser if expression encountered
@@ -443,6 +444,9 @@ static void print_ast_list(int depth, ast_node_list_t list)
 }
 void print_ast(int depth, ast_node_t *root)
 {
+    if(!root) {
+        return;
+    }
     switch(root->node_type) {
     case AST_NODE_FUNC_DECL:
         print(depth, "func-decl:");
@@ -471,13 +475,13 @@ void print_ast(int depth, ast_node_t *root)
         print_ast_list(depth + 2, root->func_call.arguments);
         break;
     case AST_NODE_DECLARATION:
+        // was segfaulting
         print(depth, "decl:");
         // print_ast(depth + 1, root->declaration.symbol);
         symbol_t sym_decl = (root->declaration.symbol.is_declaration)
                                 ? root->declaration.symbol
                                 : *root->declaration.symbol.declaration;
-        print(depth, "sym: %s: %s (%s)", sym_decl.name.ptr, type_to_readable(sym_decl.type),
-              sym_decl.suffix.ptr);
+        print(depth, "sym: %s: %s", sym_decl.name.ptr, type_to_readable(sym_decl.type));
         if(root->declaration.assignment) {
             print(depth + 1, "assign:");
             print_ast(depth + 2, root->declaration.assignment);
@@ -575,7 +579,7 @@ void print_ast(int depth, ast_node_t *root)
         break;
     case AST_NODE_SYMBOL:;
         symbol_t sym = (root->symbol.is_declaration) ? root->symbol : *root->symbol.declaration;
-        print(depth, "sym: (%s%s: %s)", sym.name.ptr, sym.suffix.ptr, type_to_readable(sym.type));
+        print(depth, "sym: (%s: %s)", sym.name.ptr, type_to_readable(sym.type));
         break;
     case AST_NODE_STRING:
         print(depth, "str: \"%s\"", root->string.ptr);
@@ -617,7 +621,7 @@ void free_ast(ast_node_t *root)
         // can't we just store the symbol in an AST node?
         if(root->symbol.is_declaration) {
             str_free(&root->symbol.name);
-            str_free(&root->symbol.suffix);
+            // str_free(&root->symbol.suffix);
         }
         free_ast(root->declaration.assignment);
         break;
@@ -629,22 +633,18 @@ void free_ast(ast_node_t *root)
         free_ast(root->body.statements);
         break;
     case AST_NODE_IF:
-        str_free(&root->if_condition.label);
         free_ast(root->if_condition.conditions);
         free_ast(root->if_condition.bodies);
         break;
     case AST_NODE_WHILE:
-        str_free(&root->while_loop.label);
         free_ast(root->while_loop.condition);
         free_ast(root->while_loop.body);
         break;
     case AST_NODE_REPEAT:
-        str_free(&root->repeat_loop.label);
         free_ast(root->repeat_loop.condition);
         free_ast(root->repeat_loop.body);
         break;
     case AST_NODE_FOR:
-        str_free(&root->for_loop.label);
         free_ast(root->for_loop.iterator);
         free_ast(root->for_loop.setup);
         free_ast(root->for_loop.condition);
@@ -657,7 +657,6 @@ void free_ast(ast_node_t *root)
     case AST_NODE_SYMBOL:
         if(root->symbol.is_declaration) {
             str_free(&root->symbol.name);
-            str_free(&root->symbol.suffix);
         }
         break;
     case AST_NODE_STRING:

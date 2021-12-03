@@ -164,6 +164,7 @@ typedef struct {
     string_t name;
     ast_node_list_t arguments;
     ast_func_def_t *def;
+    ast_func_decl_t *decl;
 } ast_func_call_t;
 
 typedef struct {
