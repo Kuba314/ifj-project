@@ -658,8 +658,7 @@ TEST_F(ScannerInput, ComplexProgram2)
     EXPECT_EQ(token.token_type, T_DOUBLE_EQUALS);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
-    EXPECT_EQ(token.token_type, T_TYPE);
-    EXPECT_EQ(token.type, TYPE_NIL);
+    EXPECT_EQ(token.token_type, T_NIL);
 
     ASSERT_EQ(get_next_token(&token), E_OK);
     EXPECT_EQ(token.token_type, T_THEN);
