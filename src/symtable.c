@@ -10,14 +10,9 @@
 
 #define DEFAULT_SIZE (101)
 
-typedef struct {
-    hashtable_t scope;
-    size_t label_counter;
-} frame_t;
-
 static deque_t scopes;
 
-static frame_t *global_frame;
+static hashtable_t *global_scope;
 
 static uint64_t hash(const char *key)
 {
@@ -28,24 +23,10 @@ static uint64_t hash(const char *key)
     return h;
 }
 
-static void free_frame(frame_t *frame)
+static void free_scope(hashtable_t *scope)
 {
-    hashtable_free(&frame->scope);
-    free(frame);
-}
-
-static frame_t *create_frame()
-{
-    frame_t *frame = malloc(sizeof(frame_t));
-    if(!frame) {
-        return NULL;
-    }
-    if(hashtable_create_bst(&frame->scope, DEFAULT_SIZE, hash) != E_OK) {
-        free(frame);
-        return NULL;
-    }
-    frame->label_counter = 0;
-    return frame;
+    hashtable_free(scope);
+    free(scope);
 }
 
 int symtable_init()
@@ -54,7 +35,7 @@ int symtable_init()
     if(symtable_push_scope() != E_OK) {
         return E_INT;
     }
-    global_frame = deque_front(&scopes);
+    global_scope = deque_front(&scopes);
     return E_OK;
 }
 
@@ -62,7 +43,7 @@ void symtable_free()
 {
     deque_element_t *it = deque_front_element(&scopes);
     while(it) {
-        free_frame(it->data);
+        free_scope(it->data);
         it = it->next;
     }
     deque_free(&scopes);
@@ -70,20 +51,20 @@ void symtable_free()
 
 int symtable_push_scope()
 {
-    frame_t *frame = create_frame();
-    if(!frame) {
+    hashtable_t *scope = malloc(sizeof(hashtable_t));
+    if(hashtable_create_bst(scope, DEFAULT_SIZE, hash) != E_OK) {
+        free(scope);
         return E_INT;
     }
-    return deque_push_front(&scopes, frame);
+    return deque_push_front(&scopes, scope);
 }
 
 int symtable_pop_scope()
 {
-    if(deque_empty(&scopes) || deque_front(&scopes) == global_frame) {
+    if(deque_empty(&scopes) || deque_front(&scopes) == global_scope) {
         return E_INT;
     }
-    frame_t *frame = deque_pop_front(&scopes);
-    free_frame(frame);
+    free_scope(deque_pop_front(&scopes));
     return E_OK;
 }
 
@@ -100,8 +81,7 @@ ast_node_t *symtable_find(const char *identifier)
 {
     deque_element_t *it = deque_front_element(&scopes);
     while(it) {
-        frame_t *frame = (frame_t *) it->data;
-        ast_node_t *symbol = find_in_table(&frame->scope, identifier);
+        ast_node_t *symbol = find_in_table(it->data, identifier);
         if(symbol) {
             return symbol;
         }
@@ -112,33 +92,27 @@ ast_node_t *symtable_find(const char *identifier)
 
 ast_node_t *symtable_find_in_global(const char *identifier)
 {
-    return find_in_table(&global_frame->scope, identifier);
+    return find_in_table(global_scope, identifier);
 }
 
 ast_node_t *symtable_find_in_current(const char *identifier)
 {
-    frame_t *frame = deque_front(&scopes);
-    return find_in_table(&frame->scope, identifier);
+    hashtable_t *scope = deque_front(&scopes);
+    return find_in_table(scope, identifier);
 }
 
 int symtable_put_symbol(const char *identifier, ast_node_t *data)
 {
-    frame_t *frame = deque_front(&scopes);
-    return hashtable_insert(&frame->scope, identifier, data);
+    hashtable_t *scope = deque_front(&scopes);
+    return hashtable_insert(scope, identifier, data);
 }
 
 int symtable_put_in_global(const char *identifier, ast_node_t *data)
 {
-    return hashtable_insert(&global_frame->scope, identifier, data);
+    return hashtable_insert(global_scope, identifier, data);
 }
 
 int symtable_scope_level()
 {
     return scopes.size - 1;
-}
-
-void symtable_increment_label_counter()
-{
-    frame_t *frame = deque_front(&scopes);
-    frame->label_counter++;
 }
