@@ -3,7 +3,16 @@
 #include "ast.h"
 #include <string.h>
 #include <ctype.h>
+#include "hashtable_bst.h"
 
+static uint64_t hash(const char *key)
+{
+    uint64_t h = 0;
+    for(const char *c = key; *c != '\0'; ++c) {
+        h = ((h << 5) ^ (h >> 27)) ^ *c;
+    }
+    return h;
+}
 
 #define OUTPUT_CODE_LINE(code) \
     printf("%s\n",code)
@@ -181,6 +190,8 @@ void generate_func_retval_dec(int i){
 }
 
 
+hashtable_t declarations;
+
 
 void process_node_func_def(ast_node_t *cur_node){
     //printf("Processing func def node.\n");
@@ -203,7 +214,9 @@ void process_node_func_def(ast_node_t *cur_node){
         retval_counter++;
     }
 
+    hashtable_create_bst(&declarations,47,hash);
     look_for_declarations(cur_node->func_def.body);
+    hashtable_free(&declarations);
     process_node(cur_node->func_def.body,0);
     global_func_counter++;
     OUTPUT_CODE_LINE("POPFRAME");
@@ -477,11 +490,17 @@ void process_binop_node(ast_node_t *binop_node){
             OUTPUT_CODE_LINE("NOTS");
             break;
         case AST_NODE_BINOP_AND:
-            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+            OUTPUT_CODE_LINE("POPS GF@op1");
+            OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+            OUTPUT_CODE_LINE("PUSHS GF@op1");
             OUTPUT_CODE_LINE("ANDS");
             break;
         case AST_NODE_BINOP_OR:
-            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+            OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+            OUTPUT_CODE_LINE("POPS GF@op1");
+            OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+            OUTPUT_CODE_LINE("PUSHS GF@op1");
             OUTPUT_CODE_LINE("ORS");
             break;
         case AST_NODE_BINOP_CONCAT:
@@ -606,7 +625,13 @@ void generate_func_call_assignment_decl(ast_node_t *rvalue){
 void generate_declaration(symbol_t  * symbol){
     char * id;
     get_id_name(symbol,&id);
-    printf("DEFVAR LF@%s\n",id);
+
+    void * garbo = NULL;
+    if (hashtable_find(&declarations,id,&garbo)!=E_OK){
+        hashtable_insert(&declarations, id,NULL);
+        printf("DEFVAR LF@%s\n",id);
+    }
+
 }
 
 void generate_move(symbol_t * symbol){
@@ -755,7 +780,6 @@ void process_node_func_call(ast_node_t *cur_node)
 {
     int lside_counter;
     if (strcmp(cur_node->func_call.name.ptr,"write")){ //If it's not write()
-        //TODO forward deklaracie mozu crashovat (asi done?)
         if (cur_node->func_call.def){
             lside_counter = count_children(cur_node->func_call.def->arguments);
         }
@@ -767,7 +791,6 @@ void process_node_func_call(ast_node_t *cur_node)
         //TODO do vysledkov zaratat aj pocet argumentov, ktore vrati funkcia na konci writu
         lside_counter = count_children(cur_node->func_call.arguments);
     }
-     //TODO Sem musim ulozit pocet returnov od POCTU ARGUMENTOV rodicovskej funkcie!!!!
     int rside_counter = 0;
     ast_node_t *cur_arg =cur_node->func_call.arguments;
     for (int i = 0;i<lside_counter;i++){
@@ -893,7 +916,6 @@ void process_for_node(ast_node_t * for_node){
     process_node(condition,0);
     process_node(copy,0);
 
-    //TODO deklarovat alternativnu premennu.
     char * iterator_name;
     get_id_name(&iterator->symbol,&iterator_name);
     char * step_name;
@@ -917,7 +939,7 @@ void process_for_node(ast_node_t * for_node){
     OUTPUT_CODE_PART("POPS ");printf("LF@%s\n",condition_name);
 
     OUTPUT_CODE_PART("LABEL "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
-
+    OUTPUT_CODE_PART("MOVE ");printf("LF@%s ",copy_name);printf("LF@%s\n",iterator_name);
     OUTPUT_CODE_PART("MOVE GF@for_condition "); printf("LF@%s\n",condition_name);
     OUTPUT_CODE_PART("MOVE GF@for_step "); printf("LF@%s\n",step_name);
     OUTPUT_CODE_PART("MOVE GF@for_iter "); printf("LF@%s\n",iterator_name);
