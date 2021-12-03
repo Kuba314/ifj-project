@@ -29,6 +29,8 @@ void exponent_float_to_integer(){
 /* TODO
 FOR
 VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava)
+short circuit expression evaluation
+Zmenit suffixy, ktore su ciselne, na pismenove
 */
 
 #include <stdio.h>
@@ -65,20 +67,26 @@ void process_string(char *s)
 
 static int global_func_counter=0;
 
+
+/*
+
+local a : integer = 4
+
+*/
+
 void process_binop_node(ast_node_t *binop_node);
 void process_unop_node(ast_node_t *unop_node);
 void process_node(ast_node_t *cur_node, int break_label);
 void generate_result();
 
-bool get_id_name(symbol_t * node_symbol, char ** name, char ** suffix){
+bool get_id_name(symbol_t * node_symbol, char ** name){
     if (node_symbol->is_declaration){
         *name = node_symbol->name.ptr;
-        *suffix = node_symbol->suffix.ptr;
         return true;
 
     }
     else{
-        return get_id_name(node_symbol->declaration,name,suffix);
+        return get_id_name(node_symbol->declaration,name);
     }
 }
 
@@ -124,10 +132,9 @@ void push_string_arg(char * string){
 void push_id_arg(symbol_t * symbol){
 
     char * name;
-    char * suffix;
-    get_id_name(symbol,&name,&suffix);
+    get_id_name(symbol,&name);
 
-    printf("LF@%s%%%s\n",name,suffix);
+    printf("LF@%s\n",name);
 }
 void push_nil_arg(){
     printf("nil@nil\n");
@@ -165,10 +172,9 @@ void generate_func_start(char*function_name)
 
 void generate_func_arg(symbol_t *symbol,int i){
     char *id;
-    char *suffix;
-    get_id_name(symbol,&id,&suffix);
-    OUTPUT_CODE_PART("DEFVAR LF@"); printf("%s%%%s\n",id,suffix);
-    OUTPUT_CODE_PART("MOVE LF@");  printf("%s%%%s ",id,suffix); OUTPUT_CODE_PART("LF@%"); printf("%d\n",i);
+    get_id_name(symbol,&id);
+    OUTPUT_CODE_PART("DEFVAR LF@"); printf("%s\n",id);
+    OUTPUT_CODE_PART("MOVE LF@");  printf("%s ",id); OUTPUT_CODE_PART("LF@%"); printf("%d\n",i);
 }
 
 void generate_func_retval_dec(int i){
@@ -237,9 +243,8 @@ void generate_integer_push(ast_node_t *rvalue){
 
 void generate_symbol_push(ast_node_t *rvalue){
     char * id;
-    char * suffix;
-    get_id_name(&rvalue->symbol,&id,&suffix);
-    printf("LF@%s%%%s\n",id,suffix);
+    get_id_name(&rvalue->symbol,&id);
+    printf("LF@%s\n",id);
 }
 
 void generate_number_push(ast_node_t *rvalue){
@@ -290,9 +295,8 @@ void ret_string_arg(char * string){
 
 void ret_id_arg(symbol_t * symbol){
     char * name;
-    char * suffix;
-    get_id_name(symbol,&name,&suffix);
-    printf("LF@%s%%%s\n",name,suffix);
+    get_id_name(symbol,&name);
+    printf("LF@%s\n",name);
 
 }
 
@@ -568,9 +572,8 @@ void generate_integer_assignment(ast_node_t *rvalue){
 
 void generate_id_assignment(ast_node_t *rvalue){
     char * id;
-    char * suffix;
-    get_id_name(&rvalue->symbol,&id,&suffix);
-    printf("LF@%s%%%s\n",id,suffix);
+    get_id_name(&rvalue->symbol,&id);
+    printf("LF@%s\n",id);
 }
 
 void generate_number_assignment(ast_node_t *rvalue){
@@ -606,16 +609,14 @@ void generate_func_call_assignment_decl(ast_node_t *rvalue){
 
 void generate_declaration(symbol_t  * symbol){
     char * id;
-    char * suffix;
-    get_id_name(symbol,&id,&suffix);
-    printf("DEFVAR LF@%s%%%s\n",id,suffix);
+    get_id_name(symbol,&id);
+    printf("DEFVAR LF@%s\n",id);
 }
 
 void generate_move(symbol_t * symbol){
     char * id;
-    char * suffix;
-    get_id_name(symbol,&id,&suffix);
-    printf("MOVE LF@%s%%%s ",id,suffix);
+    get_id_name(symbol,&id);
+    printf("MOVE LF@%s ",id);
 }
 
 
@@ -887,12 +888,44 @@ void output_label(int label_counter){
 }
 
 
-
+/*
 void process_for_node(ast_node_t * for_node){
+    global_label_counter++;
+    int local_label_counter = global_label_counter;
+    global_label_counter++;
+    int second_local_label_counter = global_label_counter;
+
+    ast_node_t * condition = cur_node->for.condition;
+    ast_node_t * body = cur_node->for.body;
 
 
 
-}
+    //Code for initialization of iterator
+    //LABEL of loop start
+    //Evaluation (is iterator equal to given number?) if yes, jump to LABEL of end
+    //Body of loop
+    //Code for step
+    //Jump to LABEL of loop start
+    //LABEL of end
+
+    //process_node()
+
+
+
+
+
+
+    OUTPUT_CODE_PART("LABEL "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    process_node(condition,0);
+    OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+    OUTPUT_CODE_LINE("POPS GF@result");
+    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(second_local_label_counter); OUTPUT_CODE_LINE(" GF@result bool@false");
+    process_node(body,second_local_label_counter);
+
+    OUTPUT_CODE_PART("JUMP "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
+    OUTPUT_CODE_PART("LABEL "); output_label(second_local_label_counter);OUTPUT_CODE_LINE("");
+
+}*/
 
 
 void generate_if_code(ast_node_t * condition, ast_node_t * body, int local_label_counter, int break_label){
@@ -1020,7 +1053,8 @@ void process_node(ast_node_t *cur_node, int break_label){
             break;
 
         case AST_NODE_FOR:
-            process_for_node(cur_node);
+            //process_for_node(cur_node);
+            break;
 
         case AST_NODE_RETURN:
             process_return_node(cur_node);
