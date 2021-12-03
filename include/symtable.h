@@ -86,30 +86,8 @@ ast_node_t *symtable_find_in_global(const char *identifier);
 ast_node_t *symtable_find_in_current(const char *identifier);
 
 /**
- * @brief Appends suffix to create unique identifier
- *
- * @param dest pointer to string to be appended to
- * @return E_INT on allocation error, othewise E_OK
- */
-int symtable_create_mangled_id(string_t *dest);
-
-/**
- * @brief Appends suffix to create unique label
- *
- * @param dest pointer to string to be appended to
- * @return E_INT on allocation error, othewise E_OK
- */
-int symtable_create_mangled_label(string_t *dest);
-
-/**
  * @brief Returns depth of current scope
  *
  * @return number from 0 to n
  */
 int symtable_scope_level();
-
-/**
- * @brief Increments label counter in current scope
- *
- */
-void symtable_increment_label_counter();
