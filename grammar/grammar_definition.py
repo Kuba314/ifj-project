@@ -1,7 +1,7 @@
 from typing import Set, Dict, List
 
 def is_term(t):
-    return t != '<expression>' and t in terminals
+    return t in terminals
 
 # https://github.com/PranayT17/Finding-FIRST-and-FOLLOW-of-given-grammar/blob/master/first_follow.py
 def get_first(seq: List[str]) -> Set[str]:
@@ -123,7 +123,7 @@ rules: Dict[str, List[List[str]]] = {
     '<statement-list>':             [['<statement>', '<statement-list2>', '<opt-return-statement>'], ['<opt-return-statement>']],
     '<statement-list2>':            [['<statement>', '<statement-list2>'], [EPS]],
     '<statement>':                  [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<identifier>', '<paren-exp-list-or-id-list2>'], ['break']],
-    '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>'], ['=', '<expression-list>']],
+    '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>']],
 
     '<cond-statement>':     [['if', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>']],
     '<cond-opt-elseif>':    [['elseif', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>'], ['else', '<statement-list>', 'end'], ['end']],
@@ -180,14 +180,10 @@ for nt, exps in rules.items():
         for first_token in get_first(exp):
             if first_token == EPS:
                 got_eps = True
-            # elif first_token == '<expression>':
-            #     continue
             table[nt][first_token] = exp
 
     if got_eps:
         for follow_token in get_follow(nt, []):
-            # prefer expression expansion after return
-            # if nt != '<ret-expression-list>':
             table[nt][follow_token] = [EPS]
 
 # change eps terminal to '$' in header signalling end of program
