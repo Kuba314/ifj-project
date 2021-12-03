@@ -85,7 +85,10 @@ class ParserTests : public ::testing::Test {
 #define check_id_node(node, str)                                                                   \
     ASSERT_NE(node, nullptr);                                                                      \
     EXPECT_EQ(node->node_type, AST_NODE_SYMBOL);                                                   \
-    EXPECT_EQ(strcmp(node->symbol.is_declaration ? node->symbol.name.ptr : node->symbol.declaration->name.ptr, str), 0);
+    EXPECT_EQ(strcmp(node->symbol.is_declaration ? node->symbol.name.ptr                           \
+                                                 : node->symbol.declaration->name.ptr,             \
+                     str),                                                                         \
+              0);
 
 // node_type has to be asserted, because usually nodes have children and this wouldn't end well
 #define check_node(node, type)                                                                     \
@@ -176,7 +179,7 @@ TEST_F(ParserTests, Add)
     ast_func_def_t func_def = global_it->func_def;
 
     EXPECT_EQ(strcmp(func_def.name.ptr, "add"), 0);
-    check_arg_names(func_def, "a", "b", NULL);
+    check_arg_names(func_def, "a%1", "b%1", NULL);
     check_arg_types(func_def, TYPE_INTEGER, TYPE_INTEGER, TYPE_NIL);
     check_type_list(func_def.return_types, TYPE_INTEGER, TYPE_NIL);
 
@@ -191,15 +194,15 @@ TEST_F(ParserTests, Add)
     EXPECT_EQ(ret_values_it->binop.type, AST_NODE_BINOP_ADD);
     check_node(ret_values_it->binop.left, AST_NODE_SYMBOL);
     check_node(ret_values_it->binop.right, AST_NODE_SYMBOL);
-    check_id_node(ret_values_it->binop.left, "a");
-    check_id_node(ret_values_it->binop.right, "b");
+    check_id_node(ret_values_it->binop.left, "a%1");
+    check_id_node(ret_values_it->binop.right, "b%1");
 
     global_it = global_it->next;
 
     ast_func_def_t func_def2 = global_it->func_def;
 
     check_str(func_def2.name, "add_local");
-    check_arg_names(func_def2, "a", "b", NULL);
+    check_arg_names(func_def2, "a%1", "b%1", NULL);
     check_arg_types(func_def2, TYPE_INTEGER, TYPE_INTEGER, TYPE_NIL);
     check_type_list(func_def2.return_types, TYPE_INTEGER, TYPE_NIL);
 
@@ -209,20 +212,20 @@ TEST_F(ParserTests, Add)
 
     check_node(statement_it2, AST_NODE_DECLARATION);
     EXPECT_EQ(statement_it2->declaration.symbol.type, TYPE_INTEGER);
-    check_str(statement_it2->declaration.symbol.name, "c");
+    check_str(statement_it2->declaration.symbol.name, "c%1");
     check_node(statement_it2->declaration.assignment, AST_NODE_BINOP);
     EXPECT_EQ(statement_it2->declaration.assignment->binop.type, AST_NODE_BINOP_ADD);
     check_node(statement_it2->declaration.assignment->binop.left, AST_NODE_SYMBOL);
     check_node(statement_it2->declaration.assignment->binop.right, AST_NODE_SYMBOL);
-    check_id_node(statement_it2->declaration.assignment->binop.left, "a");
-    check_id_node(statement_it2->declaration.assignment->binop.right, "b");
+    check_id_node(statement_it2->declaration.assignment->binop.left, "a%1");
+    check_id_node(statement_it2->declaration.assignment->binop.right, "b%1");
 
     statement_it2 = statement_it2->next;
 
     check_node(statement_it2, AST_NODE_RETURN);
     ast_node_list_t ret_values_it2 = statement_it2->return_values.values;
 
-    check_id_node(ret_values_it2, "c");
+    check_id_node(ret_values_it2, "c%1");
 
     EXPECT_EQ(ret_values_it2->next, nullptr);
     EXPECT_EQ(statement_it2->next, nullptr);
