@@ -21,7 +21,7 @@ typedef struct {
  * @brief Creates an empty string object
  *
  * @param[out] str pointer to newly created string
- * @return 1 on allocation error, else 0
+ * @return E_INT on allocation error, else E_OK
  */
 int str_create_empty(string_t *str);
 
@@ -30,7 +30,7 @@ int str_create_empty(string_t *str);
  *
  * @param s char sequence to load
  * @param[out] str pointer to newly created string
- * @return 1 on allocation error, else 0
+ * @return E_INT on allocation error, else E_OK
  */
 int str_create(const char *s, string_t *str);
 
@@ -39,7 +39,7 @@ int str_create(const char *s, string_t *str);
  *
  * @param str string object to append the char to
  * @param ch char that gets appended
- * @return 1 on allocation error, else 0
+ * @return E_INT on allocation error, else E_OK
  */
 int str_append_char(string_t *str, char ch);
 
