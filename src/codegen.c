@@ -27,11 +27,8 @@ void exponent_float_to_integer(){
 }
 
 /* TODO
-FOR
 VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava)
 short circuit expression evaluation
-Zmenit suffixy, ktore su ciselne, na pismenove
-Forward deklaracie funkcii
 */
 
 #include <stdio.h>
@@ -352,9 +349,7 @@ void process_unop_node(ast_node_t *unop_node){
 void process_binop_node(ast_node_t *binop_node){
     if (binop_node->node_type == AST_NODE_BINOP){
         process_binop_node(binop_node->binop.left);
-        //if(binop_node.left_short_circuited){ //TODO Short circuit evaluation
-            process_binop_node(binop_node->binop.right);
-        //}
+        process_binop_node(binop_node->binop.right);
     }
     else{
         switch(binop_node->node_type){
@@ -744,13 +739,9 @@ void process_assignment_node(ast_node_t *cur_node){
     int cur_max = lside_counter-1;
     for(int l = 0; l<lside_counter;l++){
         identifier = cur_node->assignment.identifiers;
-        //printf("L: %d\n",l);
         for(int k = 0;k<lside_counter;k++){
-            //printf("K: %d\n",k);
             if(k==cur_max){
                 OUTPUT_CODE_LINE("POPS GF@result");
-                //printf("SOM TU, najdi sa\n");
-                //printf("SYMBOL JE %p\n",identifier->symbol.declaration);
                 generate_move(&identifier->symbol);
                 generate_result();
                 }
@@ -875,19 +866,6 @@ void eval_condition(){
     OUTPUT_CODE_LINE("RETURN");
 }
 
-/*
-
-typedef struct {
-    ast_node_t *iterator;
-    ast_node_t *setup;
-    ast_node_t *condition;
-    ast_node_t *step;
-    ast_node_t *body;
-    string_t label;
-} ast_for_t;
-
-*/
-
 
 int global_label_counter = 0;
 void output_label(int label_counter){
@@ -895,45 +873,136 @@ void output_label(int label_counter){
 }
 
 
-/*
+
 void process_for_node(ast_node_t * for_node){
     global_label_counter++;
     int local_label_counter = global_label_counter;
     global_label_counter++;
     int second_local_label_counter = global_label_counter;
 
-    ast_node_t * condition = cur_node->for.condition;
-    ast_node_t * body = cur_node->for.body;
 
+    ast_node_t * iterator = for_node->for_loop.iterator;
+    ast_node_t * step = for_node->for_loop.step;
+    ast_node_t * condition = for_node->for_loop.condition;
+    ast_node_t * copy = for_node->for_loop.setup;
 
+    ast_node_t * body = for_node->for_loop.body;
 
-    //Code for initialization of iterator
-    //LABEL of loop start
-    //Evaluation (is iterator equal to given number?) if yes, jump to LABEL of end
-    //Body of loop
-    //Code for step
-    //Jump to LABEL of loop start
-    //LABEL of end
+    process_node(iterator,0);
+    process_node(step,0);
+    process_node(condition,0);
+    process_node(copy,0);
 
-    //process_node()
+    //TODO deklarovat alternativnu premennu.
+    char * iterator_name;
+    get_id_name(&iterator->symbol,&iterator_name);
+    char * step_name;
+    get_id_name(&step->symbol,&step_name);
+    char * condition_name;
+    get_id_name(&condition->symbol,&condition_name);
+    char * copy_name;
+    get_id_name(&copy->symbol,&copy_name);
 
+    //Konvertuj iterator, step, condition na rovnaky typ.
+    OUTPUT_CODE_PART("PUSHS ");printf("LF@%s\n",iterator_name);
+    OUTPUT_CODE_LINE("CALL FOR_CONVERT");
+    OUTPUT_CODE_PART("POPS ");printf("LF@%s\n",iterator_name);
 
+    OUTPUT_CODE_PART("PUSHS ");printf("LF@%s\n",step_name);
+    OUTPUT_CODE_LINE("CALL ZERO_STEP");
+    OUTPUT_CODE_PART("POPS ");printf("LF@%s\n",step_name);
 
-
-
+    OUTPUT_CODE_PART("PUSHS ");printf("LF@%s\n",condition_name);
+    OUTPUT_CODE_LINE("CALL FOR_CONVERT");
+    OUTPUT_CODE_PART("POPS ");printf("LF@%s\n",condition_name);
 
     OUTPUT_CODE_PART("LABEL "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
-    process_node(condition,0);
-    OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
+
+    OUTPUT_CODE_PART("MOVE GF@for_condition "); printf("LF@%s\n",condition_name);
+    OUTPUT_CODE_PART("MOVE GF@for_step "); printf("LF@%s\n",step_name);
+    OUTPUT_CODE_PART("MOVE GF@for_iter "); printf("LF@%s\n",iterator_name);
+    OUTPUT_CODE_LINE("CALL SHOULD_I_JUMP");
     OUTPUT_CODE_LINE("POPS GF@result");
-    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(second_local_label_counter); OUTPUT_CODE_LINE(" GF@result bool@false");
+    OUTPUT_CODE_PART("JUMPIFEQ ");output_label(second_local_label_counter);OUTPUT_CODE_LINE(" GF@result bool@true");
+
+
     process_node(body,second_local_label_counter);
 
+
+    OUTPUT_CODE_PART("ADD "); printf("LF@%s ",iterator_name);printf("LF@%s ",iterator_name);printf("LF@%s\n",step_name);
     OUTPUT_CODE_PART("JUMP "); output_label(local_label_counter);OUTPUT_CODE_LINE("");
     OUTPUT_CODE_PART("LABEL "); output_label(second_local_label_counter);OUTPUT_CODE_LINE("");
+}
 
-}*/
+    /*
+    if step is negative, jump if iter is lower than condition.
+    if step is positive, jump if iter is higher than condition.
+    */
 
+
+void should_i_jump(){
+    OUTPUT_CODE_LINE("LABEL SHOULD_I_JUMP");
+
+    OUTPUT_CODE_LINE("LT GF@result GF@for_step float@0x0p+0");
+    OUTPUT_CODE_LINE("JUMPIFEQ NEG_STEP GF@result bool@true");
+    OUTPUT_CODE_LINE("JUMP POS_STEP");
+
+    OUTPUT_CODE_LINE("LABEL NEG_STEP");
+    OUTPUT_CODE_LINE("LT GF@result GF@for_iter GF@for_condition");
+    OUTPUT_CODE_LINE("PUSHS GF@result");
+
+    OUTPUT_CODE_LINE("JUMP SHOULD_I_JUMP_END");
+
+    OUTPUT_CODE_LINE("LABEL POS_STEP");
+    OUTPUT_CODE_LINE("GT GF@result GF@for_iter GF@for_condition");
+    OUTPUT_CODE_LINE("PUSHS GF@result");
+
+    OUTPUT_CODE_LINE("LABEL SHOULD_I_JUMP_END");
+    OUTPUT_CODE_LINE("RETURN");
+
+}
+
+void zero_step(){
+    OUTPUT_CODE_LINE("LABEL ZERO_STEP");
+    OUTPUT_CODE_LINE("POPS GF@op1");
+    OUTPUT_CODE_LINE("TYPE GF@type1 GF@op1");
+
+    OUTPUT_CODE_LINE("JUMPIFEQ stepFIRST_OP_NIL GF@type1 string@nil");
+    OUTPUT_CODE_LINE("JUMPIFEQ stepFIRST_OP_INT_conv GF@type1 string@int");
+    OUTPUT_CODE_LINE("JUMP stepFLOAT_DONE");
+    OUTPUT_CODE_LINE("LABEL stepFIRST_OP_INT_conv");
+    OUTPUT_CODE_LINE("INT2FLOAT GF@op1 GF@op1");
+
+    OUTPUT_CODE_LINE("LABEL stepFLOAT_DONE");
+    OUTPUT_CODE_LINE("PUSHS GF@op1");
+    OUTPUT_CODE_LINE("JUMPIFEQ step_is_zero GF@op1 float@0x0p+0");
+    OUTPUT_CODE_LINE("RETURN");
+
+    OUTPUT_CODE_LINE("LABEL step_is_zero");
+    OUTPUT_CODE_LINE("EXIT int@6");
+
+    OUTPUT_CODE_LINE("LABEL stepFIRST_OP_NIL");
+    OUTPUT_CODE_LINE("EXIT int@7");
+}
+
+void for_convert(){
+    OUTPUT_CODE_LINE("LABEL FOR_CONVERT");
+    OUTPUT_CODE_LINE("POPS GF@op1");
+    OUTPUT_CODE_LINE("TYPE GF@type1 GF@op1");
+
+    OUTPUT_CODE_LINE("JUMPIFEQ forFIRST_OP_NIL GF@type1 string@nil");
+    OUTPUT_CODE_LINE("JUMPIFEQ forFIRST_OP_INT_conv GF@type1 string@int");
+    OUTPUT_CODE_LINE("JUMP forFLOAT_DONE");
+    OUTPUT_CODE_LINE("LABEL forFIRST_OP_INT_conv");
+    OUTPUT_CODE_LINE("INT2FLOAT GF@op1 GF@op1");
+
+    OUTPUT_CODE_LINE("LABEL forFLOAT_DONE");
+    OUTPUT_CODE_LINE("PUSHS GF@op1");
+    OUTPUT_CODE_LINE("RETURN");
+
+    OUTPUT_CODE_LINE("LABEL forFIRST_OP_NIL");
+    OUTPUT_CODE_LINE("EXIT int@8");
+}
 
 void generate_if_code(ast_node_t * condition, ast_node_t * body, int local_label_counter, int break_label){
     global_label_counter++;
@@ -1060,7 +1129,7 @@ void process_node(ast_node_t *cur_node, int break_label){
             break;
 
         case AST_NODE_FOR:
-            //process_for_node(cur_node);
+            process_for_node(cur_node);
             break;
 
         case AST_NODE_RETURN:
@@ -1085,6 +1154,7 @@ void process_node(ast_node_t *cur_node, int break_label){
 
 void look_for_declarations(ast_node_t *root)
 {
+
     switch(root->node_type) {
     case AST_NODE_DECLARATION:
         // if not already declared, do this: TODO
@@ -1116,7 +1186,9 @@ void look_for_declarations(ast_node_t *root)
         break;
     case AST_NODE_FOR:
         look_for_declarations(root->for_loop.iterator);
-        look_for_declarations(root->for_loop.body);
+        look_for_declarations(root->for_loop.condition);
+        look_for_declarations(root->for_loop.step);
+        look_for_declarations(root->for_loop.setup);
         break;
     }
 }
@@ -1386,7 +1458,6 @@ void conv_to_float(){
     OUTPUT_CODE_LINE("PUSHS GF@op1");
     OUTPUT_CODE_LINE("PUSHS GF@op2");
     OUTPUT_CODE_LINE("RETURN");
-
 }
 
 void check_if_int(){
@@ -1511,6 +1582,12 @@ void generate_builtin(){
     EMPTY_LINE;
     conv_to_float();
     EMPTY_LINE;
+    zero_step();
+    EMPTY_LINE;
+    for_convert();
+    EMPTY_LINE;
+    should_i_jump();
+    EMPTY_LINE;
 
 }
 
@@ -1530,6 +1607,9 @@ void generate_header(){
     OUTPUT_CODE_LINE("DEFVAR GF@loop_iterator");
     OUTPUT_CODE_LINE("DEFVAR GF@exponent");
     OUTPUT_CODE_LINE("DEFVAR GF@base");
+    OUTPUT_CODE_LINE("DEFVAR GF@for_iter");
+    OUTPUT_CODE_LINE("DEFVAR GF@for_condition");
+    OUTPUT_CODE_LINE("DEFVAR GF@for_step");
     OUTPUT_CODE_LINE("JUMP $$main");
     EMPTY_LINE;
     COMMENT("Built-in functions:");
