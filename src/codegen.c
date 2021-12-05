@@ -35,17 +35,19 @@ void exponent_float_to_integer(){
 
 }
 
-/* TODO
-VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava) IBA NA ASSIGNMENTE!!!!!
-short circuit expression evaluation
-write musi z poslednej funkcie zavolat taky pocet returnov, aky ma
-*/
-
 #include <stdio.h>
 #include "ctype.h"
 
 void look_for_declarations(ast_node_t *root);
 void process_node_func_call(ast_node_t *cur_node);
+int global_label_counter = 0;
+
+
+
+void output_label(int label_counter){
+    printf("%%%d",label_counter);
+}
+
 
 void process_string(char *s)
 {
@@ -226,6 +228,27 @@ void process_node_func_def(ast_node_t *cur_node){
 
 }
 
+void generate_func_call_assignment_RL(ast_node_t *rvalue,int lside_counter){
+    process_node_func_call(rvalue);
+    if (rvalue->next){ //If the func call is not the last in assignment right side, only the first retval is used.
+        OUTPUT_CODE_LINE("PUSHS TF@retval0");
+    }
+
+    if(rvalue->next == NULL){ //We can return more than one value if the last item in list is function and pad with nil if an argument is missing.
+
+        int ret_count = count_children(rvalue->func_call.def->return_types);
+        //printf("********* %d\n ***********",ret_count);
+        //printf("\n**************** %d %d *****************\n",ret_count,lside_counter);
+        for (int i = 0; i<ret_count; i++){
+            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",ret_count-1-i); //Push all children.
+        }
+        //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
+        for (int k = 0; k<lside_counter-ret_count;k++){         //If need be, pad with nils
+            OUTPUT_CODE_LINE("PUSHS nil@nil");
+        }
+    }
+}
+
 
 void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
     process_node_func_call(rvalue);
@@ -238,7 +261,7 @@ void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
         int ret_count = count_children(rvalue->func_call.def->return_types);
         //printf("\n**************** %d %d *****************\n",ret_count,lside_counter);
         for (int i = 0; i<ret_count; i++){
-            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",ret_count-1-i); //Push all children.
+            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",i); //Push all children.
         }
         //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
         for (int k = 0; k<lside_counter-ret_count;k++){         //If need be, pad with nils
@@ -359,11 +382,37 @@ void process_unop_node(ast_node_t *unop_node){
             break;
     }
 }
-
+//binop_node->binop.type == AST_NODE_BINOP_OR
 void process_binop_node(ast_node_t *binop_node){
+    global_label_counter++;
+    int local_label_counter = global_label_counter;
+    global_label_counter++;
+    int second_local_label_counter = global_label_counter;
     if (binop_node->node_type == AST_NODE_BINOP){
         process_binop_node(binop_node->binop.left);
+
+        if(binop_node->binop.type == AST_NODE_BINOP_OR){ // Pri OR skaceme na koniec, ak bola prva cast true.
+            OUTPUT_CODE_LINE("POPS GF@result");
+            OUTPUT_CODE_LINE("PUSHS GF@result");
+            OUTPUT_CODE_PART("JUMPIFEQ ");output_label(local_label_counter);OUTPUT_CODE_LINE(" GF@result bool@true");
+
+        }
+        if(binop_node->binop.type == AST_NODE_BINOP_AND){ // Pri AND skaceme na koniec, ak bola prva cast false.
+            OUTPUT_CODE_LINE("POPS GF@result");
+            OUTPUT_CODE_LINE("PUSHS GF@result");
+            OUTPUT_CODE_PART("JUMPIFEQ ");output_label(local_label_counter);OUTPUT_CODE_LINE(" GF@result bool@false");
+        }
         process_binop_node(binop_node->binop.right);
+        OUTPUT_CODE_PART("JUMP ");output_label(second_local_label_counter); printf("\n");
+        OUTPUT_CODE_PART("LABEL ");output_label(local_label_counter);printf("\n");
+
+        if(binop_node->binop.type == AST_NODE_BINOP_OR){ // Prva cast oru bola true, pridame este jedno true.
+            OUTPUT_CODE_LINE("PUSHS bool@true");
+        }
+        if(binop_node->binop.type == AST_NODE_BINOP_AND){ // Prva cast andu bola false, pridame este jedno false.
+            OUTPUT_CODE_LINE("PUSHS bool@false");
+         }
+        OUTPUT_CODE_PART("LABEL ");output_label(second_local_label_counter); printf("\n");
     }
     else{
         switch(binop_node->node_type){
@@ -751,7 +800,7 @@ void process_assignment_node(ast_node_t *cur_node){
                         generate_nil_push(); //done
                         break;
                     case AST_NODE_FUNC_CALL:
-                        generate_func_call_assignment(expression,lside_counter-(rside_counter-1));
+                        generate_func_call_assignment_RL(expression,lside_counter-(rside_counter-1));
                         break;
                     case AST_NODE_BINOP:
                         generate_binop_assignment(expression);
@@ -797,7 +846,9 @@ void process_node_func_call(ast_node_t *cur_node)
     }
     int rside_counter = 0;
     ast_node_t *cur_arg =cur_node->func_call.arguments;
+    int added_to_write = 0;
     for (int i = 0;i<lside_counter;i++){
+        added_to_write = 1;
         switch(cur_arg->node_type){
             case AST_NODE_SYMBOL:
                 OUTPUT_CODE_PART("PUSHS ");
@@ -824,6 +875,12 @@ void process_node_func_call(ast_node_t *cur_node)
                 generate_nil_push(); //done
                 break;
             case AST_NODE_FUNC_CALL:
+                if (cur_arg->func_call.def){
+                    added_to_write = count_children(cur_arg->func_call.def->return_types);
+                }
+                else{
+                    added_to_write = count_children(cur_arg->func_call.decl->return_types);
+                }
                 generate_func_call_assignment(cur_arg,lside_counter-rside_counter);
                 break;
             case AST_NODE_BINOP:
@@ -846,6 +903,10 @@ void process_node_func_call(ast_node_t *cur_node)
     }
 
     OUTPUT_CODE_LINE("CREATEFRAME");
+    if (!strcmp(cur_node->func_call.name.ptr,"write")){
+        lside_counter = lside_counter-1+added_to_write;
+    }
+
     for(int l = 0; l<lside_counter;l++){
         OUTPUT_CODE_LINE("POPS GF@result");
         printf("DEFVAR TF@%%%d\n",lside_counter-1-l);
@@ -857,7 +918,7 @@ void process_node_func_call(ast_node_t *cur_node)
         OUTPUT_CODE_PART("CALL $"); printf("%s\n",cur_node->func_call.name.ptr);
     }
     else{
-        generate_write(rside_counter);
+        generate_write(lside_counter);
     }
     EMPTY_LINE;
 }
@@ -893,10 +954,6 @@ void eval_condition(){
 }
 
 
-int global_label_counter = 0;
-void output_label(int label_counter){
-    printf("%%%d",label_counter);
-}
 
 
 
