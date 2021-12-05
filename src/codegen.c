@@ -5,8 +5,7 @@
 #include <ctype.h>
 #include "hashtable_bst.h"
 
-static uint64_t hash(const char *key)
-{
+static uint64_t hash(const char *key){
     uint64_t h = 0;
     for(const char *c = key; *c != '\0'; ++c) {
         h = ((h << 5) ^ (h >> 27)) ^ *c;
@@ -395,7 +394,6 @@ void process_binop_node(ast_node_t *binop_node){
             OUTPUT_CODE_LINE("POPS GF@result");
             OUTPUT_CODE_LINE("PUSHS GF@result");
             OUTPUT_CODE_PART("JUMPIFEQ ");output_label(local_label_counter);OUTPUT_CODE_LINE(" GF@result bool@true");
-
         }
         if(binop_node->binop.type == AST_NODE_BINOP_AND){ // Pri AND skaceme na koniec, ak bola prva cast false.
             OUTPUT_CODE_LINE("POPS GF@result");
@@ -1574,7 +1572,7 @@ OUTPUT_CODE_LINE("TYPE GF@type1 GF@base");
 OUTPUT_CODE_LINE("TYPE GF@type2 GF@exponent");
 
 
-OUTPUT_CODE_LINE("JUMPIFEQ EXPONENT_INT string@int GF@type2");  //if e is float (unsupported)
+OUTPUT_CODE_LINE("JUMPIFEQ EXPONENT_INT string@int GF@type2");  //if e is float, we turn it to integer
 OUTPUT_CODE_LINE("FLOAT2INT GF@exponent GF@exponent");
 OUTPUT_CODE_LINE("LABEL EXPONENT_INT");
 
@@ -1594,13 +1592,13 @@ OUTPUT_CODE_LINE("SUB GF@exponent GF@exponent int@1");                    //if e
 OUTPUT_CODE_LINE("PUSHS GF@result");
 
 
-OUTPUT_CODE_LINE("MOVE GF@loop_iterator int@0");                       //for (int i = 0;...
+OUTPUT_CODE_LINE("MOVE GF@loop_iterator int@0");
 OUTPUT_CODE_LINE("LABEL EXP_LOOP_START");
+OUTPUT_CODE_LINE("JUMPIFEQ EXP_LOOP_END GF@loop_iterator GF@exponent");                    //for (int i = 0;i<(base i - 1);
 OUTPUT_CODE_LINE("PUSHS GF@base");
 OUTPUT_CODE_LINE("CALL CONV_CHECK");
 OUTPUT_CODE_LINE("MULS");
 OUTPUT_CODE_LINE("ADD GF@loop_iterator GF@loop_iterator int@1");                        // i++;)
-OUTPUT_CODE_LINE("JUMPIFEQ EXP_LOOP_END GF@loop_iterator GF@exponent");     // ...i<(base i - 1);
 OUTPUT_CODE_LINE("JUMP EXP_LOOP_START");
 
 
