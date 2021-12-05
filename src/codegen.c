@@ -36,8 +36,9 @@ void exponent_float_to_integer(){
 }
 
 /* TODO
-VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava)
+VYHODNOTENIE SPRAVA DOLAVA (zatial mas zlava doprava) IBA NA ASSIGNMENTE!!!!!
 short circuit expression evaluation
+write musi z poslednej funkcie zavolat taky pocet returnov, aky ma
 */
 
 #include <stdio.h>
@@ -228,7 +229,6 @@ void process_node_func_def(ast_node_t *cur_node){
 
 void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
     process_node_func_call(rvalue);
-
     if (rvalue->next){ //If the func call is not the last in assignment right side, only the first retval is used.
         OUTPUT_CODE_LINE("PUSHS TF@retval0");
     }
@@ -236,11 +236,12 @@ void generate_func_call_assignment(ast_node_t *rvalue,int lside_counter){
     if(rvalue->next == NULL){ //We can return more than one value if the last item in list is function and pad with nil if an argument is missing.
 
         int ret_count = count_children(rvalue->func_call.def->return_types);
+        //printf("\n**************** %d %d *****************\n",ret_count,lside_counter);
         for (int i = 0; i<ret_count; i++){
-            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",i); //Push all children.
+            OUTPUT_CODE_PART("PUSHS TF@retval"); printf("%d\n",ret_count-1-i); //Push all children.
         }
         //printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
-        for (int k = 0; k<lside_counter-ret_count;k++){            //If need be, pad with nils
+        for (int k = 0; k<lside_counter-ret_count;k++){         //If need be, pad with nils
             OUTPUT_CODE_LINE("PUSHS nil@nil");
         }
     }
@@ -712,67 +713,70 @@ void process_assignment_node(ast_node_t *cur_node){
         identifier_iterator=identifier_iterator->next;
     }
     int rside_counter = 0;
-    ast_node_t * expression = cur_node->assignment.expressions;
-    while(expression!=NULL){
-        switch(expression->node_type){
-            case AST_NODE_SYMBOL:
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_symbol_push(expression); //done
-                break;
-            case AST_NODE_INTEGER:
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_integer_push(expression); //done
-                break;
-            case AST_NODE_NUMBER:
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_number_push(expression); //done
-                break;
-            case AST_NODE_BOOLEAN:
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_bool_push(expression); //done
-                break;
-            case AST_NODE_STRING:
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_string_push(expression); //done
-                break;
-            case AST_NODE_NIL:
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_nil_push(); //done
-                break;
-            case AST_NODE_FUNC_CALL:
-                generate_func_call_assignment(expression,lside_counter-rside_counter);
-                break;
-            case AST_NODE_BINOP:
-                generate_binop_assignment(expression);
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_result();
-                break;
-             case AST_NODE_UNOP:
-                generate_unop_assignment(expression);
-                OUTPUT_CODE_PART("PUSHS ");
-                generate_result();
-                break;
-        }
+    ast_node_t * expression_iterator = cur_node->assignment.expressions;
+    while (expression_iterator!=NULL){
         rside_counter++;
-        expression=expression->next;
-    }
-    for(int j = 0; j<rside_counter-lside_counter;j++){
-        OUTPUT_CODE_LINE("POPS GF@trash"); //Losing unwanted expression results.
+        expression_iterator=expression_iterator->next;
     }
 
-    ast_node_t * identifier;
-    int cur_max = lside_counter-1;
-    for(int l = 0; l<lside_counter;l++){
-        identifier = cur_node->assignment.identifiers;
-        for(int k = 0;k<lside_counter;k++){
-            if(k==cur_max){
-                OUTPUT_CODE_LINE("POPS GF@result");
-                generate_move(&identifier->symbol);
-                generate_result();
+    ast_node_t * expression;
+    int cur_max_exp = rside_counter-1;
+    for(int l = 0; l<rside_counter;l++){
+        expression = cur_node->assignment.expressions;
+        for(int k = 0;k<rside_counter;k++){
+            if(k==cur_max_exp){
+                switch(expression->node_type){
+                    case AST_NODE_SYMBOL:
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_symbol_push(expression); //done
+                        break;
+                    case AST_NODE_INTEGER:
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_integer_push(expression); //done
+                        break;
+                    case AST_NODE_NUMBER:
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_number_push(expression); //done
+                        break;
+                    case AST_NODE_BOOLEAN:
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_bool_push(expression); //done
+                        break;
+                    case AST_NODE_STRING:
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_string_push(expression); //done
+                        break;
+                    case AST_NODE_NIL:
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_nil_push(); //done
+                        break;
+                    case AST_NODE_FUNC_CALL:
+                        generate_func_call_assignment(expression,lside_counter-(rside_counter-1));
+                        break;
+                    case AST_NODE_BINOP:
+                        generate_binop_assignment(expression);
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_result();
+                        break;
+                    case AST_NODE_UNOP:
+                        generate_unop_assignment(expression);
+                        OUTPUT_CODE_PART("PUSHS ");
+                        generate_result();
+                        break;
                 }
-            identifier=identifier->next;
+            }
+            expression=expression->next;
         }
-        cur_max--;
+        cur_max_exp--;
+    }
+
+
+    ast_node_t * identifier= cur_node->assignment.identifiers;
+    while (identifier){
+        OUTPUT_CODE_LINE("POPS GF@result");
+        generate_move(&identifier->symbol);
+        generate_result();
+        identifier=identifier->next;
     }
 }
 
@@ -840,10 +844,9 @@ void process_node_func_call(ast_node_t *cur_node)
     for(int j = 0; j<rside_counter-lside_counter;j++){
         OUTPUT_CODE_LINE("POPS GF@trash"); //Losing unwanted expression results.
     }
-    //funkcia (3,4,foo())
+
     OUTPUT_CODE_LINE("CREATEFRAME");
     for(int l = 0; l<lside_counter;l++){
-        //printf("\n\n\n%d %s\n\n\n",l,cur_node->func_call.name.ptr);
         OUTPUT_CODE_LINE("POPS GF@result");
         printf("DEFVAR TF@%%%d\n",lside_counter-1-l);
         printf("MOVE TF@%%%d GF@result\n",lside_counter-1-l);
@@ -1108,8 +1111,7 @@ void process_node(ast_node_t *cur_node, int break_label){
             // Declarations are ignored in code generator.
             break;
         case AST_NODE_SYMBOL:
-            OUTPUT_CODE_PART("PUSHS ");
-            ret_id_arg(&(cur_node->symbol));
+            OUTPUT_CODE_PART("PUSHS ");ret_id_arg(&(cur_node->symbol));
             break;
         case AST_NODE_INTEGER:
             OUTPUT_CODE_PART("PUSHS ");printf("int@%ld\n",cur_node->integer);
