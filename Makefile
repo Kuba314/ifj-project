@@ -1,15 +1,16 @@
 CC = gcc
 CXX = g++
 CFLAGS = -std=c11 -Werror
-LDFLAGS = --coverage
 CXXFLAGS = -std=c++11
-CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ --coverage -g
+CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ -g
 TARGETS = all_tests
-PACK = xrozek02
+PACKED_PROJECT = xrozek02.tar.gz
 DOC = dokumentace
 DOC_DIR = doc
-IS_IT_OK_DIR = is_it_ok_dir
+DEP_DIR = dep_dir
+
 IS_IT_OK_SCRIPT = ./tests/is_it_ok.sh
+EXECUTABLE = ifj21_compiler
 LIB_OBJECTS = \
 	src/utils/dynstring.o \
 	src/utils/stack.o \
@@ -27,52 +28,51 @@ LIB_OBJECTS = \
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
-
 COV_REPORT_FILES = coverage/ $(shell find . -type f \( -name '*.gc??' -o -name '*.info' \))
 ALL_OBJECTS = $(shell find . -type f -name '*.o')
+ALL_SOURCE_FILES = $(shell find . -type f -name '*.c')
+ALL_HEADER_FILES = $(shell find . -type f -name '*.h')
+OBJ=$(SRC:.c=.o)
 
-.PHONY: all test doc clean pack clean_pack is_it_ok clean_is_it_ok
+.PHONY: all test doc clean pack is_it_ok
 
 vpath %.h include/
 vpath %.c src/
 
-all: all_tests
+# compiling in a folder with no directory structure
+all: $(EXECUTABLE)
+
+$(EXECUTABLE): $(LIB_OBJECTS) src/main.o
+	gcc -o $@ $^ $(LDFLAGS)
+
+src/main.o: src/main.c
 
 # link test files with gtest
 all_tests: $(TEST_OBJECTS) $(LIB_OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS) -lstdc++ -lgtest -lgtest_main -lpthread -lm
+	$(CC) $(LDFLAGS) -o $@ $^ -lstdc++ -lgtest -lgtest_main -lpthread
 
 test: all_tests
 	./all_tests
 
 doc:
 	doxygen Doxyfile
-	cd $(DOC_DIR) && pdflatex dokumentace.tex
-	cd $(DOC_DIR) && pdflatex dokumentace.tex
-	cp $(DOC_DIR)/$(DOC).pdf $(DOC).pdf
+	cd $(DOC_DIR) && pdflatex $(DOC).tex
+	cd $(DOC_DIR) && pdflatex $(DOC).tex
 
-# collect *.gcda files, remove system includes and generate coverage html report
-# TODO: don't put --coverage into relase binaries, compile own binary with this flag
-coverage: test
-	lcov --capture --output-file coverage.info -d . -q
-	lcov --remove coverage.info '/usr/*' --output-file=coverage.info -q
-	genhtml coverage.info --output-directory coverage -q
+pack: clean doc
+	mkdir -p $(DEP_DIR)
+	cp $(ALL_SOURCE_FILES) $(ALL_HEADER_FILES) rozdeleni rozsireni Makefile $(DEP_DIR)/
+	cd $(DEP_DIR) && tar -czf $(PACKED_PROJECT) *
+	cp $(DEP_DIR)/$(PACKED_PROJECT) .
 
-$(PACK).tgz: doc
-	tar -czf $@ *.h *.c rozdeleni rozdeleni $^
-
-is_it_ok: clean_is_it_ok $(PACK).tgz
-	chmod +x $(IS_IT_OK_SCRIPT)
-	$(IS_IT_OK_SCRIPT) $(PACK).tgz $(IS_IT_OK_DIR)
-
-clean_is_it_ok:
-	rm -rf $(IS_IT_OK_DIR)
-
-clean_pack:
-	rm -f $(PACK).tgz
+is_it_ok: pack
+	cp $(IS_IT_OK_SCRIPT) ./$(DEP_DIR)
+	chmod +x $(DEP_DIR)/is_it_ok.sh
+	mkdir -p $(DEP_DIR)/test
+	cd $(DEP_DIR) && ./is_it_ok.sh $(PACKED_PROJECT) test
 
 clean:
 	rm -rf $(TARGETS) $(ALL_OBJECTS) $(COV_REPORT_FILES)
-	cd $(DOC_DIR) && rm -f 	$(DOC).aux $(DOC).dvi $(DOC).log $(DOC).ps $(DOC).out $(DOC).toc $(DOC).pdf *.log
-	cd $(DOC_DIR) && rm -rf html/
-	rm -f $(DOC).pdf
+	[ -f $(DOC_DIR) ] && cd $(DOC_DIR) && rm -f $(DOC).{aux,dvi,log,ps,out,toc,pdf} *.log || exit 0
+	rm -rf $(DOC_DIR)/html $(DEP_DIR)
+	rm -f $(DOC).pdf $(PACKED_PROJECT)

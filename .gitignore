@@ -1,6 +1,8 @@
 *.o
 build/
-doc/
+doc/*
+!doc/dokumentace.tex
+dep_dir/
 __pycache__/
 all_tests
 
@@ -12,3 +14,6 @@ coverage/
 
 # Clion editor config files
 .idea/
+
+*.tar.gz
+ifj21_compiler
