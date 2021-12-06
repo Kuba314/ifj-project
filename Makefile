@@ -2,7 +2,8 @@ CC = gcc
 CXX = g++
 CFLAGS = -std=c11 -Werror
 CXXFLAGS = -std=c++11
-CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ -g
+LDFLAGS = --coverage
+CPPFLAGS = -Wall -Wextra -pedantic -Iinclude/ -g --coverage
 TARGETS = all_tests
 PACKED_PROJECT = xrozek02.tar.gz
 DOC = dokumentace
@@ -58,6 +59,11 @@ doc:
 	doxygen Doxyfile
 	cd $(DOC_DIR) && pdflatex $(DOC).tex
 	cd $(DOC_DIR) && pdflatex $(DOC).tex
+
+coverage: test
+	lcov --capture --output-file coverage.info -d . -q
+	lcov --remove coverage.info '/usr/*' --output-file=coverage.info -q
+	genhtml coverage.info --output-directory coverage -q
 
 pack: clean doc
 	mkdir -p $(DEP_DIR)
