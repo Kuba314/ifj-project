@@ -73,7 +73,7 @@ class ParserTests : public ::testing::Test {
         scanner_free();
     }
 
-    ast_node_t *ast;
+    ast_node_t *ast = NULL;
 };
 
 // these have to be macros, because ASSERT_ doesn't exit, it just returns
