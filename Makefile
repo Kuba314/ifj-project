@@ -10,20 +10,7 @@ DOC = dokumentace
 DOC_DIR = doc
 IS_IT_OK_DIR = is_it_ok_dir
 IS_IT_OK_SCRIPT = ./tests/is_it_ok.sh
-LIB_OBJECTS = \
-	src/utils/dynstring.o \
-	src/utils/stack.o \
-	src/utils/search_key.o \
-	src/utils/binary_search_tree.o \
-	src/utils/hashtablebase.o \
-	src/utils/deque.o \
-	src/parser-syn.o \
-	src/parser-generated.o \
-	src/parser-precedence.o \
-	src/type.o \
-	src/scanner.o \
-	src/symtable.o \
-	src/semantics.o
+LIB_OBJECTS = $(patsubst %.c, %.o, $(shell find src/ -type f -name '*.c'))
 
 TEST_SOURCES = $(wildcard tests/*.cpp)
 TEST_OBJECTS = $(patsubst %.cpp, %.o, $(TEST_SOURCES))
