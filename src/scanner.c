@@ -224,6 +224,11 @@ static int process_decimal(string_t *str, token_t *t)
     }
 }
 
+/**
+ * Initializes scanner.
+ *
+ * @param[out] source_file Pointer to source file to be read from.
+ */
 void scanner_init(FILE *source_file)
 {
     fptr = source_file;
@@ -232,6 +237,11 @@ void scanner_init(FILE *source_file)
     column = 0;
 }
 
+/**
+ * Closes source file.
+ *
+ * @return E_OK on success, otherwise E_INT
+ */
 int scanner_free(void)
 {
     if(fclose(fptr)) {
@@ -240,10 +250,33 @@ int scanner_free(void)
     return E_OK;
 }
 
+/**
+ * Prints error message to stderr.
+ *
+ * @param err Type of error to report.
+ */
+void report_err(int err)
+{
+    if(err) {
+        fprintf(stderr, "scanner error: allocation error.\n", row, column);
+    } else {
+        fprintf(stderr, "scanner error: %d:%d unknown token.\n", row, column);
+    }
+    return E_OK;
+}
+
+/**
+ * Main function of scanner. Reads next token from source file.
+ *
+ *
+ * @param[out] t Pointer to token, to which attributes are assigned
+ * @return E_OK on success, E_LEX on lexical error, E_INT on internal error.
+ */
 static int _get_next_token(token_t *t)
 {
     // Checks if the file to be read is present
     if(!fptr) {
+        report_err(E_INT);
         return E_INT;
     }
 
@@ -251,6 +284,7 @@ static int _get_next_token(token_t *t)
 
     // Initialises a null terminated empty string
     if(str_create_empty(&str)) {
+        report_err(E_INT);
         return E_INT;
     }
 
@@ -282,6 +316,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -370,6 +405,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -389,6 +425,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else {
@@ -403,6 +440,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -412,6 +450,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -420,6 +459,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -432,6 +472,7 @@ static int _get_next_token(token_t *t)
 
                 if(process_integer(&str, t)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 } else {
                     str_free(&str);
@@ -443,6 +484,7 @@ static int _get_next_token(token_t *t)
             if(isdigit(c)) {
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else if(tolower(c) == 'e') {
@@ -451,6 +493,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, tolower(c))) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -462,6 +505,7 @@ static int _get_next_token(token_t *t)
 
                 if(process_decimal(&str, t)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 } else {
                     str_free(&str);
@@ -476,6 +520,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else if(isdigit(c)) {
@@ -484,11 +529,13 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else {
 
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
             }
             break;
@@ -496,6 +543,7 @@ static int _get_next_token(token_t *t)
             if(isdigit(c)) {
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
 
@@ -508,6 +556,7 @@ static int _get_next_token(token_t *t)
 
                 if(process_decimal(&str, t)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 } else {
                     str_free(&str);
@@ -524,6 +573,7 @@ static int _get_next_token(token_t *t)
                 t->token_type = T_DOUBLE_DOT;
                 return E_OK;
             } else {
+                report_err(E_LEX);
                 return E_LEX;
             }
             break;
@@ -588,6 +638,7 @@ static int _get_next_token(token_t *t)
             } else {
                 ungetc(c, fptr);
                 column--;
+                report_err(E_LEX);
                 return E_LEX;
             }
             break;
@@ -642,6 +693,7 @@ static int _get_next_token(token_t *t)
                 str_create_empty(&str);
             } else if(c == EOF) {
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
             }
             break;
@@ -665,6 +717,7 @@ static int _get_next_token(token_t *t)
                 column = 0;
             } else if(c == EOF) {
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
             }
 
@@ -676,11 +729,13 @@ static int _get_next_token(token_t *t)
 
                 str_free(&str);
                 if(str_create_empty(&str)) {
+                    report_err(E_INT);
                     return E_INT;
                 }
 
             } else if(c == EOF) {
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
             }
 
@@ -701,6 +756,7 @@ static int _get_next_token(token_t *t)
             } else if(c == EOF) {
 
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
 
             } else {
@@ -711,6 +767,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             }
@@ -724,6 +781,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else if(c == 'n') {
@@ -731,6 +789,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, '\n')) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else if(c == 't') {
@@ -738,6 +797,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, '\t')) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else if(c == '"') {
@@ -745,6 +805,7 @@ static int _get_next_token(token_t *t)
 
                 if(str_append_char(&str, '"')) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else if(isdigit(c)) {
@@ -754,6 +815,7 @@ static int _get_next_token(token_t *t)
 
             } else {
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
             }
             break;
@@ -764,6 +826,7 @@ static int _get_next_token(token_t *t)
                 esc_mem[1] = c;
             } else {
                 str_free(&str);
+                report_err(E_LEX);
                 return E_LEX;
             }
             break;
@@ -776,10 +839,12 @@ static int _get_next_token(token_t *t)
                 if(val) {
                     if(str_append_char(&str, val)) {
                         str_free(&str);
+                        report_err(E_INT);
                         return E_INT;
                     }
                 } else {
                     str_free(&str);
+                    report_err(E_LEX);
                     return E_LEX;
                 }
                 state = SCANNER_STATE_STRING;
@@ -789,6 +854,7 @@ static int _get_next_token(token_t *t)
             if(c == '_' || isdigit(c) || isalpha(c)) {
                 if(str_append_char(&str, c)) {
                     str_free(&str);
+                    report_err(E_INT);
                     return E_INT;
                 }
             } else {
