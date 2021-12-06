@@ -124,6 +124,7 @@ rules: Dict[str, List[List[str]]] = {
     '<statement-list2>':            [['<statement>', '<statement-list2>'], [EPS]],
     '<statement>':                  [['<cond-statement>'], ['<while-loop>'], ['<for-loop>'], ['<repeat-until>'], ['<declaration>'], ['<identifier>', '<paren-exp-list-or-id-list2>'], ['break']],
     '<paren-exp-list-or-id-list2>': [['(', '<optional-fun-expression-list>', ')'], ['<identifier-list2>', '=', '<expression-list>']],
+    '<optional-fun-parens>':        [['(', '<optional-fun-expression-list>', ')'], [EPS]],
 
     '<cond-statement>':     [['if', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>']],
     '<cond-opt-elseif>':    [['elseif', '<expression>', 'then', '<statement-list>', '<cond-opt-elseif>'], ['else', '<statement-list>', 'end'], ['end']],
@@ -155,7 +156,7 @@ rules: Dict[str, List[List[str]]] = {
     '<opt-binop>':  [['<binop>', '<expression>'], [EPS]],
     '<binop>':      [['+'], ['-'], ['*'], ['/'], ['%'], ['^'], ['//'], ['..'], [':'], ['<'], ['>'], ['<='], ['>='], ['=='], ['~='], ['and'], ['or']],
     '<unop>':       [['-'], ['#'], ['not']],
-    '<term>':       [['(', '<expression>', ')'], ['<identifier>'], ['<number>'], ['<integer>'], ['<string>'], ['<bool>'], ['nil']],
+    '<term>':       [['(', '<expression>', ')'], ['<identifier>', '<optional-fun-parens>'], ['<number>'], ['<integer>'], ['<string>'], ['<bool>'], ['nil']],
 
 }
 

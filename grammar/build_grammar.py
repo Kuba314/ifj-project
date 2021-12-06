@@ -55,7 +55,7 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write( '    mempool.offset += n_tokens * sizeof(nut_type_t);\n')
         f.write( '    return ret;\n')
         f.write( '}\n')
-        f.write( 'size_t parser_get_table_index(nterm_type_t nterm, term_type_t term)\n{\n    ')
+        f.write( 'size_t parser_get_table_index(nterm_type_t nterm, term_type_t term)\n{\n')
         if nt_main:
             f.write(f'    return ((nterm << {shift}) + term) % {mod};\n')
         else:
@@ -67,7 +67,8 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write('    switch(nterm) {\n')
         for i, nterm in enumerate(nts):
             token_name = get_token_name(nterm)
-            f.write(f'        case NT_{token_name}: return "{nterm}";\n')
+            f.write(f'    case NT_{token_name}:\n')
+            f.write(f'        return "{nterm}";\n')
         f.write('    }\n')
         f.write('    return "<unknown-nterm>";\n')
         f.write('}\n')
@@ -76,13 +77,14 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write('    switch(term) {\n')
         for i, term in enumerate(ts):
             token_name = get_token_name(term)
-            f.write(f'        case T_{token_name}: return "{term}";\n')
+            f.write(f'    case T_{token_name}:\n')
+            f.write(f'        return "{term}";\n')
         f.write('    }\n')
         f.write('    return "<unknown-term>";\n')
         f.write('}\n')
 
         f.write( 'int parser_init()\n{\n')
-        f.write( '    mempool.offset = 0;')
+        f.write( '    mempool.offset = 0;\n')
         f.write(f'    mempool.data = calloc({total_exp_len}, sizeof(nut_type_t));\n')
         f.write( '    if(mempool.data == NULL) {\n')
         f.write( '        return E_INT;\n')
@@ -93,7 +95,7 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write( '    if(table == NULL) {\n')
         f.write( '        return E_INT;\n')
         f.write( '    }\n\n')
-        f.write( '    table->bucket_count = rule_count;')
+        f.write( '    table->bucket_count = rule_count;\n')
 
         index_set = set()
         for nterm, expd in table.items():
@@ -137,13 +139,13 @@ def output_table_c(table: Dict[str, Dict[str, List[str]]], source_fname: str, he
         f.write('#include "type.h"\n')
         f.write('#include "dynstring.h"\n\n')
         f.write('// order of these two enums is crucial\n')
-        f.write('typedef enum {\n')
+        f.write('typedef enum\n{\n')
         for nterm in nts:
             token_name = get_token_name(nterm)
             f.write(f'    NT_{token_name},\n')
         f.write('} nterm_type_t;\n\n')
 
-        f.write('typedef enum {\n')
+        f.write('typedef enum\n{\n')
         for term in ts:
             token_name = get_token_name(term)
             f.write(f'    T_{token_name},\n')
@@ -196,9 +198,9 @@ if __name__ == '__main__':
     print('Generating files...')
     output_table_c(table, src_file, header_file)
 
-    try:
-        print('Formatting files...')
-        subprocess.run(['clang-format', '--style=file', '-i', src_file, header_file], check=True)
-    except subprocess.CalledProcessError:
-        print('failed to format files with `clang-format`', file=sys.stderr)
+    # try:
+    #     print('Formatting files...')
+    #     subprocess.run(['clang-format', '--style=file', '-i', src_file, header_file], check=True)
+    # except subprocess.CalledProcessError:
+    #     print('failed to format files with `clang-format`', file=sys.stderr)
 
