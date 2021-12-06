@@ -1,8 +1,11 @@
 *.o
 build/
-doc/
+doc/*
+!doc/dokumentace.tex
+dep_dir/
 __pycache__/
 all_tests
+ifj21_compiler
 
 # Coverage report files
 coverage/
@@ -12,3 +15,5 @@ coverage/
 
 # Clion editor config files
 .idea/
+
+*.tgz
