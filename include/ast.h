@@ -76,6 +76,8 @@ typedef ast_node_t *ast_node_list_t;
 typedef struct symbol symbol_t;
 struct symbol {
     bool is_declaration;
+    symbol_t *last_assignment;
+    int current_read;
     union {
         struct {
             type_t type;
@@ -83,6 +85,7 @@ struct symbol {
             bool used;
             bool dirty;
             bool constant;
+            int read_count;
             union {
                 string_t string;
                 int64_t integer;
@@ -130,19 +133,16 @@ struct ast_func_def {
 typedef struct {
     ast_node_list_t conditions; // if and elseif conditions
     ast_node_list_t bodies;     // if, elseif and else bodies (one node longer than conditions)
-    string_t label;
 } ast_if_t;
 
 typedef struct {
     ast_node_t *condition;
     ast_node_t *body;
-    string_t label;
 } ast_while_t;
 
 typedef struct {
     ast_node_t *body;
     ast_node_t *condition;
-    string_t label;
 } ast_repeat_t;
 
 typedef struct {
@@ -151,7 +151,6 @@ typedef struct {
     ast_node_t *condition;
     ast_node_t *step;
     ast_node_t *body;
-    string_t label;
 } ast_for_t;
 
 typedef struct {
@@ -212,7 +211,7 @@ struct ast_node {
         ast_return_t return_values;
 
         symbol_t symbol;
-        uint64_t integer;
+        int64_t integer;
         double number;
         bool boolean;
         string_t string;
