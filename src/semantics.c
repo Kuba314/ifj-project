@@ -5,11 +5,16 @@
 #include <stdlib.h>
 
 #ifdef DBG
-
-static int dbgseverity = 1;
+static int dbgseverity = 6;
 
     #define PRINT(severity, ...)                                                                   \
         if(severity >= dbgseverity) {                                                              \
+            fprintf(stderr, __VA_ARGS__);                                                          \
+        }
+
+    #define DPRINT(severity, depth, ...)                                                           \
+        if(severity >= dbgseverity) {                                                              \
+            fprintf(stderr, "<%d> ", depth);                                                       \
             fprintf(stderr, __VA_ARGS__);                                                          \
         }
 
@@ -19,10 +24,15 @@ static int dbgseverity = 1;
         do {                                                                                       \
         } while(0);
 
+    #define DPRINT(depth, ...)                                                                     \
+        (void) depth;                                                                              \
+        do {                                                                                       \
+        } while(0);
+
 #endif
 
 #ifdef DBG
-static const char *node_type_to_readable(ast_node_type_t type)
+const char *node_type_to_readable(ast_node_type_t type)
 {
     switch(type) {
     case AST_NODE_INVALID:
@@ -84,11 +94,65 @@ static const char *node_type_to_readable(ast_node_type_t type)
 }
 #endif
 
+static const char *binop_type_to_readable(ast_node_binop_type_t type)
+{
+    switch(type) {
+    case AST_NODE_BINOP_ADD:
+        return "+";
+    case AST_NODE_BINOP_SUB:
+        return "-";
+    case AST_NODE_BINOP_MUL:
+        return "*";
+    case AST_NODE_BINOP_DIV:
+        return "/";
+    case AST_NODE_BINOP_INTDIV:
+        return "//";
+    case AST_NODE_BINOP_MOD:
+        return "%";
+    case AST_NODE_BINOP_POWER:
+        return "^";
+    case AST_NODE_BINOP_CONCAT:
+        return "..";
+    case AST_NODE_BINOP_AND:
+        return "and";
+    case AST_NODE_BINOP_OR:
+        return "or";
+    case AST_NODE_BINOP_LT:
+        return "<";
+    case AST_NODE_BINOP_LTE:
+        return "<=";
+    case AST_NODE_BINOP_GT:
+        return ">";
+    case AST_NODE_BINOP_GTE:
+        return ">=";
+    case AST_NODE_BINOP_EQ:
+        return "==";
+    case AST_NODE_BINOP_NE:
+        return "~=";
+    default:
+        return "";
+    }
+}
+
+static const char *unop_type_to_readable(ast_node_unop_type_t type)
+{
+    switch(type) {
+    case AST_NODE_UNOP_LEN:
+        return "#";
+    case AST_NODE_UNOP_NEG:
+        return "-";
+    case AST_NODE_UNOP_NOT:
+        return "not";
+    default:
+        return "";
+    }
+}
+
 static ast_func_def_t *current_def;
 
 static int check_expression(ast_node_t **node, type_t *type);
 
-static int sem_get_type(ast_node_t *node, type_t *dest)
+int sem_get_type(ast_node_t *node, type_t *dest)
 {
 
     switch(node->node_type) {
@@ -127,6 +191,8 @@ static int sem_get_type(ast_node_t *node, type_t *dest)
     case AST_NODE_UNOP:
         *dest = node->unop.metadata.result;
         break;
+    case AST_NODE_FUNC_CALL:
+        *dest = sem_get_func_call_type(node);
     default:
         return E_INT;
         break;
@@ -134,7 +200,7 @@ static int sem_get_type(ast_node_t *node, type_t *dest)
     return E_OK;
 }
 
-static bool is_number_or_integer(type_t type)
+bool is_number_or_integer(type_t type)
 {
     return type == TYPE_NUMBER || type == TYPE_INTEGER;
 }
@@ -156,15 +222,16 @@ int get_binop_type(type_t left, type_t right, type_t *result)
     return E_OK;
 }
 
-int sem_get_func_call_type(ast_node_t *node, type_t *type)
+type_t sem_get_func_call_type(ast_node_t *node)
 {
     ast_node_t *return_types = node->func_call.def ? node->func_call.def->return_types
                                                    : node->func_call.decl->return_types;
     if(!return_types) {
-        return E_TYPE_CALL;
+        // implicit nil?
+        return TYPE_NIL;
+    } else {
+        return return_types->type;
     }
-    *type = return_types->type;
-    return E_OK;
 }
 
 ast_func_decl_t *get_func_decl_ref(ast_node_t *node)
@@ -225,15 +292,20 @@ int check_variable(ast_node_t *node, bool read, bool write)
 
         PRINT(3, "Mapped to: %s , %s\n", declaration->name.ptr,
               type_to_readable(declaration->type));
-        // str_free(&node->symbol.name);
+        str_free(&node->symbol.name);
         node->symbol.declaration = declaration;
         node->symbol.is_declaration = false;
 
         if(read) {
             declaration->used = true;
+            declaration->read_count++;
+            if(declaration->last_assignment) {
+                declaration->last_assignment->current_read++;
+            }
         }
         if(write) {
             declaration->dirty = true;
+            declaration->last_assignment = &node->symbol;
         }
         (void) read;
         (void) write;
@@ -326,6 +398,16 @@ bool check_pass_type_compatibility(type_t source, type_t dest)
     return false;
 }
 
+ast_node_t *get_func_call_returns(ast_node_t *node)
+{
+    if(node->func_call.def) {
+        return node->func_call.def->return_types;
+    } else if(node->func_call.decl) {
+        return node->func_call.decl->return_types;
+    }
+    return NULL;
+}
+
 int check_func_call(ast_node_t *node, bool main_body)
 {
     char *name = node->func_call.name.ptr;
@@ -342,6 +424,14 @@ int check_func_call(ast_node_t *node, bool main_body)
     ast_func_decl_t *decl = get_func_decl_ref(sym);
     node->func_call.decl = decl;
 
+    if(def) {
+        def->used = true;
+    }
+
+    if(decl) {
+        decl->used = true;
+    }
+
     if(main_body) {
         PRINT(3, "Checking in main body\n");
 
@@ -349,30 +439,36 @@ int check_func_call(ast_node_t *node, bool main_body)
 
         ast_node_list_t return_types = get_func_return_types(sym);
         if(return_types) {
-            PRINT(3, "SEM Error: function in main body can't return values\n");
+            fprintf(stderr, "parser: error: function in main body can't return values\n");
             return E_TYPE_CALL;
+        }
+    }
+
+    for(ast_node_t *it = node->func_call.arguments; it; it = it->next) {
+        type_t type;
+        int r = check_expression(&it, &type);
+        if(r != E_OK) {
+            return r;
         }
     }
 
     // special case: variadic arguments
     bool ignore_types = (strcmp(name, "write") == 0);
-    if(ignore_types) {
-        // check argument list
-        for(ast_node_t *it = node->func_call.arguments; it; it = it->next) {
-            type_t type;
-            int r = check_expression(&it, &type);
-            if(r != E_OK) {
-                return r;
-            }
-        }
-
-    } else {
+    if(!ignore_types) {
         // check arguments and type compatibility
         ast_node_t *args = def ? def->arguments : decl->argument_types;
         ast_node_t *input = node->func_call.arguments;
         while(input && args) {
+
+            if(input->node_type == AST_NODE_FUNC_CALL) {
+                if(!input->next) {
+                    input = get_func_call_returns(input);
+                    PRINT(3, "   adjusting [%p]\n", (void *) input);
+                    continue;
+                }
+            }
             type_t source;
-            int r = check_expression(&input, &source);
+            int r = sem_get_type(input, &source);
             if(r != E_OK) {
                 return r;
             }
@@ -464,6 +560,8 @@ static int check_declared_variable(char *identifier, ast_node_t *node)
         }
     }
 
+    node->declaration.symbol.last_assignment = &node->declaration.symbol;
+
     return r;
 }
 
@@ -497,18 +595,22 @@ int check_function(ast_node_t *node, char *name)
             if(decl) {
                 PRINT(3, "Error: duplicate declaration\n");
                 return E_REDEF;
-            } else {
-                sym->func_def.decl = &node->func_decl;
-                decl = &node->func_decl;
             }
+            if(sym->node_type == AST_NODE_FUNC_DEF) {
+                sym->func_def.decl = &node->func_decl;
+            }
+            node->func_decl.def = def;
+            decl = &node->func_decl;
         } else { // AST_NODE_FUNC_DEF
             if(def) {
                 PRINT(3, "Error: duplicate definition\n");
                 return E_REDEF;
-            } else {
-                sym->func_decl.def = &node->func_def;
-                def = &node->func_def;
             }
+            if(sym->node_type == AST_NODE_FUNC_DECL) {
+                sym->func_decl.def = &node->func_def;
+            }
+            node->func_def.decl = decl;
+            def = &node->func_def;
         }
 
         if(decl && def) {
@@ -586,6 +688,27 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
 
                 type_t type;
                 int r = check_expression(&node->while_loop.condition, &type);
+                if(r != E_OK) {
+                    return r;
+                }
+            }
+            break;
+        case AST_NODE_REPEAT:
+            if(!expected.is_nterm && expected.term == T_REPEAT) {
+
+                if(symtable_push_scope() != E_OK) {
+                    return E_INT;
+                }
+
+            } else if(!expected.is_nterm && expected.term == T_UNTIL) {
+                PRINT(3, "SEM: Popping scope\n");
+                if(symtable_pop_scope() != E_OK) {
+                    return E_INT;
+                }
+            } else if(expected.is_nterm && expected.nterm == NT_EXPRESSION) {
+
+                type_t type;
+                int r = check_expression(&node->repeat_loop.condition, &type);
                 if(r != E_OK) {
                     return r;
                 }
@@ -829,28 +952,57 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
 
                 ast_node_t *ids = node->assignment.identifiers;
                 ast_node_t *exp = node->assignment.expressions;
-                while(ids) {
-                    int r = check_variable(ids, true, true);
+
+                while(exp) {
+                    type_t source;
+                    int r = check_expression(&exp, &source);
                     if(r != E_OK) {
                         return r;
                     }
+                    exp = exp->next;
+                }
 
-                    if(exp) {
-                        type_t source;
-                        // PRINT(3, " >> GET TYPE START\n");
-                        int r = check_expression(&exp, &source);
-                        // PRINT(3, " >> GET TYPE END\n");
-                        PRINT(3, "Get type (R%d): %s\n", r, type_to_readable(source));
-                        if(r != E_OK) {
-                            return r;
-                        }
-                        type_t dest = ids->symbol.declaration->type;
-                        if(!check_pass_type_compatibility(source, dest)) {
-                            return E_ASSIGN;
-                        }
-                        exp = exp->next;
+                while(ids) {
+                    int r = check_variable(ids, false, true);
+                    if(r != E_OK) {
+                        return r;
                     }
                     ids = ids->next;
+                }
+
+                ids = node->assignment.identifiers;
+                exp = node->assignment.expressions;
+                while(ids && exp) {
+
+                    if(exp->node_type == AST_NODE_FUNC_CALL) {
+                        if(!exp->next) {
+                            exp = get_func_call_returns(exp);
+                            PRINT(3, "   adjusting [%p]\n", (void *) exp);
+                            continue;
+                        }
+                    }
+
+                    type_t source;
+                    // PRINT(3, " >> GET TYPE START\n");
+                    int r = sem_get_type(exp, &source);
+                    // PRINT(3, " >> GET TYPE END\n");
+                    PRINT(3, "Get type (R%d): %s\n", r, type_to_readable(source));
+                    if(r != E_OK) {
+                        return r;
+                    }
+                    type_t dest = ids->symbol.declaration->type;
+                    if(!check_pass_type_compatibility(source, dest)) {
+                        fprintf(stderr, "parser: error: incompatible types in assignment\n");
+                        return E_ASSIGN;
+                    }
+                    exp = exp->next;
+                    ids = ids->next;
+                }
+
+                if(ids) {
+                    // error: not enoough values
+                    fprintf(stderr, "parser: error: not enough values in assignment\n");
+                    return E_ASSIGN;
                 }
 
                 PRINT(3, "Check ~~ assignment types:\n");
@@ -861,7 +1013,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
 
                 char *name = node->declaration.symbol.name.ptr;
 
-                PRINT(3, "                  check local declaration: %s\n", name);
+                PRINT(3, "check local declaration: %s\n", name);
 
                 int r = E_OK;
                 if(node->declaration.assignment) {
@@ -873,6 +1025,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                     }
                     type_t dest = node->declaration.symbol.type;
                     if(!check_pass_type_compatibility(source, dest)) {
+                        fprintf(stderr, "parser: error: incompatible types in declaration\n");
                         return E_ASSIGN;
                     }
                 }
@@ -946,19 +1099,15 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                           node_type_to_readable(types->node_type));
 
                     type_t t1;
-                    //                    if(values->node_type == AST_NODE_FUNC_CALL &&
-                    //                    !values->next) {
-                    //                        ast_func_def_t *def = values->func_call.def;
-                    //                        PRINT(3, "   adjusting [%p]\n", def);
-                    //                        if(def) {
-                    //                            values = def->return_types;
-                    //                        }
-                    //                    } else if(values->node_type == AST_NODE_FUNC_CALL) {
-                    //                        int r = sem_get_func_call_type(values, &t1);
-                    //                        if(r != E_OK) {
-                    //                            return r;
-                    //                        }
-                    //                    }
+                    if(values->node_type == AST_NODE_FUNC_CALL && !values->next) {
+                        ast_func_def_t *def = values->func_call.def;
+                        PRINT(3, "   adjusting [%p]\n", (void *) def);
+                        if(def) {
+                            values = def->return_types;
+                        }
+                    } else if(values->node_type == AST_NODE_FUNC_CALL) {
+                        t1 = sem_get_func_call_type(values);
+                    }
 
                     int r = sem_get_type(values, &t1);
                     if(r != E_OK) {
@@ -972,6 +1121,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                     }
                     PRINT(3, "%s vs %s\n", type_to_readable(t1), type_to_readable(t2));
                     if(!check_pass_type_compatibility(t1, t2)) {
+                        fprintf(stderr, "parser: error: incompatible types in return\n");
                         return E_TYPE_CALL;
                     }
 
@@ -1015,11 +1165,10 @@ static int check_expression(ast_node_t **node, type_t *type)
         r = check_unop_node(node, type);
         break;
     case AST_NODE_SYMBOL:
-        r = check_variable(*node, false, false);
+        r = check_variable(*node, true, false);
         if(r != E_OK) {
             return r;
         }
-        (*node)->symbol.declaration->used = true;
         *type = (*node)->symbol.declaration->type;
         break;
     case AST_NODE_FUNC_CALL:
@@ -1032,10 +1181,7 @@ static int check_expression(ast_node_t **node, type_t *type)
         if(r != E_OK) {
             return r;
         }
-        r = sem_get_func_call_type(*node, type);
-        if(r != E_OK) {
-            return r;
-        }
+        *type = sem_get_func_call_type(*node);
         break;
     case AST_NODE_INTEGER:
         *type = TYPE_INTEGER;
@@ -1101,6 +1247,8 @@ int check_unop_node(ast_node_t **node, type_t *type)
     }
 
     if(!check_unop_operation((*node)->unop.type, optype)) {
+        fprintf(stderr, "parser: error: cannot use operator '%s' for type %s.\n",
+                unop_type_to_readable((*node)->unop.type), type_to_readable(optype));
         return E_TYPE_EXPR;
     }
     switch((*node)->unop.type) {
@@ -1154,7 +1302,6 @@ bool check_binop_operation(ast_node_binop_type_t type, type_t source, type_t *re
 int check_binop_node(ast_node_t **node, type_t *type)
 {
     int r;
-
     type_t left;
     r = check_expression(&(*node)->binop.left, &left);
     if(r != E_OK) {
@@ -1175,7 +1322,21 @@ int check_binop_node(ast_node_t **node, type_t *type)
     } else if((*node)->binop.type == AST_NODE_BINOP_AND ||
               (*node)->binop.type == AST_NODE_BINOP_OR) {
         *type = TYPE_BOOL;
+        (*node)->binop.metadata.result = *type;
         return E_OK;
+    }
+
+    if((*node)->binop.type == AST_NODE_BINOP_DIV || (*node)->binop.type == AST_NODE_BINOP_INTDIV) {
+        if((*node)->binop.right->node_type == AST_NODE_INTEGER &&
+           (*node)->binop.right->integer == 0) {
+            fprintf(stderr, "parser: error: division by 0\n");
+            return E_ZERODIV;
+        }
+        if((*node)->binop.right->node_type == AST_NODE_NUMBER &&
+           (*node)->binop.right->number == 0) {
+            fprintf(stderr, "parser: error: division by 0\n");
+            return E_ZERODIV;
+        }
     }
 
     if(!type_check_skip) {
@@ -1184,9 +1345,17 @@ int check_binop_node(ast_node_t **node, type_t *type)
         PRINT(3, "[r: %d]Eval binop node: %d   %s\n", r, (*node)->binop.type,
               type_to_readable(*type));
         if(r != E_OK) {
+            if(r == E_TYPE_EXPR || r == E_NIL) {
+                fprintf(stderr, "parser: error: cannot use operator '%s' for types %s and %s\n",
+                        binop_type_to_readable((*node)->binop.type), type_to_readable(left),
+                        type_to_readable(right));
+            }
             return r;
         }
         if(!check_binop_operation((*node)->binop.type, *type, type)) {
+            fprintf(stderr, "parser: error: cannot use operator '%s' for types %s and %s\n",
+                    binop_type_to_readable((*node)->binop.type), type_to_readable(left),
+                    type_to_readable(right));
             return E_TYPE_EXPR;
         }
     }
@@ -1195,16 +1364,7 @@ int check_binop_node(ast_node_t **node, type_t *type)
 
     return r;
 }
-/*
-int sem_check_expression(ast_node_t *node)
-{
-    type_t type;
-    int r = check_expression(node, &type);
 
-    PRINT(3, "RESULT type[%d]: %s\n", r, type_to_readable(type));
-    return r;
-}
-*/
 static ast_node_t builtin_write = { .node_type = AST_NODE_FUNC_DEF,
                                     .func_def = { .name.ptr = "write",
                                                   .arguments = NULL,
@@ -1341,7 +1501,7 @@ static ast_node_t builtin_chr = {
     .visited_children = 0
 };
 
-int sem_init()
+int semantics_init()
 {
     int r = symtable_init();
     if(r != E_OK) {
@@ -1362,7 +1522,16 @@ int sem_init()
     return E_OK;
 }
 
-void sem_free()
+void semantics_free()
 {
     symtable_free();
+}
+
+bool sem_is_builtin_used(char *name)
+{
+    ast_node_t *sym = symtable_find_in_global(name);
+    if(sym && sym->node_type == AST_NODE_FUNC_DEF) {
+        return sym->func_def.used;
+    }
+    return true;
 }
