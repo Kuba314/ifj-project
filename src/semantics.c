@@ -225,7 +225,7 @@ int check_variable(ast_node_t *node, bool read, bool write)
 
         PRINT(3, "Mapped to: %s , %s\n", declaration->name.ptr,
               type_to_readable(declaration->type));
-        // str_free(&node->symbol.name);
+        str_free(&node->symbol.name);
         node->symbol.declaration = declaration;
         node->symbol.is_declaration = false;
 
