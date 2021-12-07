@@ -1,9 +1,217 @@
+/**
+ * IFJ21 Compiler
+ *
+ *  Copyright 2021 xvanom00 Michal Vano
+ *
+ *  Licensed under GNU General Public License 3.0 or later.
+ *  Some rights reserved. See COPYING, AUTHORS.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @file codegen.c
+ *
+ * @brief IFJCode21 generator from an abstract syntax tree
+ */
+
 #include <stdio.h>
 #include "error.h"
 #include "ast.h"
 #include <string.h>
 #include <ctype.h>
 #include "hashtable_bst.h"
+
+#define OUTPUT_CODE_LINE(code) printf("%s\n", code)
+
+#define OUTPUT_CODE_PART(code) printf("%s", code)
+
+#define EMPTY_LINE printf("\n")
+
+#define COMMENT(comm) printf("#%s\n", comm)
+
+
+//Codegen initialization
+void avengers_assembler(ast_node_t *ast);
+
+void generate_header();
+
+void process_node_program(ast_node_t *cur_node);
+
+//All IFJcode21 premade code.
+void generate_builtin();
+
+//Builtin functions
+void generate_reads();
+
+void generate_readi();
+
+void generate_readn();
+
+void generate_tointeger();
+
+void generate_chr();
+
+void generate_ord();
+
+void generate_substring();
+
+//Additional builtin functions
+void int_zerodivcheck();
+
+void float_zerodivcheck();
+
+void nil_check();
+
+void check_for_conversion();
+
+void conv_to_float();
+
+void check_if_int();
+
+void exponentiation();
+
+void exponent_float_to_integer();
+
+void should_i_jump();
+
+void zero_step();
+
+void for_convert();
+
+void eval_condition();
+
+void check_nil_write();
+
+
+
+
+//Main switch
+void process_node(ast_node_t *cur_node, int break_label);
+
+//Following processing functions
+void process_unop_node(ast_node_t *unop_node);
+
+void process_binop_node(ast_node_t *binop_node);
+
+void process_declaration_node(ast_node_t *cur_node, bool is_in_loop);
+
+void process_assignment_node(ast_node_t *cur_node);
+
+void process_node_func_call(ast_node_t *cur_node);
+
+void process_for_node(ast_node_t *for_node);
+
+void generate_if_code(ast_node_t *condition, ast_node_t *body, int local_label_counter,
+                      int break_label);
+
+void process_if_node(ast_node_t *cur_node, int break_label);
+
+void process_while_node(ast_node_t *cur_node);
+
+void process_repeat_until(ast_node_t *cur_node);
+
+void process_node_func_def(ast_node_t *cur_node);
+
+
+//Additional helping functions
+void process_string(char *s);
+
+void look_for_declarations(ast_node_t *root);
+
+void output_label(int label_counter);
+
+void generate_result();
+
+bool get_id_name(symbol_t *node_symbol, char **name);
+
+int count_children(ast_node_list_t children_list);
+
+void push_integer_arg(uint64_t integer);
+
+void push_number_arg(double number);
+
+void push_bool_arg(bool boolean);
+
+void push_string_arg(char *string);
+
+void push_id_arg(symbol_t *symbol);
+
+void push_nil_arg();
+
+void generate_write(int arg_count);
+
+void generate_func_start(char *function_name);
+
+void generate_func_arg(symbol_t *symbol, int i);
+
+void generate_func_retval_dec(int i);
+
+void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter);
+
+void generate_func_call_assignment(ast_node_t *rvalue, int lside_counter);
+
+void generate_integer_push(ast_node_t *rvalue);
+
+void generate_symbol_push(ast_node_t *rvalue);
+
+void generate_number_push(ast_node_t *rvalue);
+
+void generate_bool_push(ast_node_t *rvalue);
+
+void generate_string_push(ast_node_t *rvalue);
+
+void generate_nil_push();
+
+void ret_integer_arg(uint64_t integer);
+
+void ret_number_arg(double number);
+
+void ret_bool_arg(bool boolean);
+
+void ret_string_arg(char *string);
+
+void ret_id_arg(symbol_t *symbol);
+
+void ret_nil_arg();
+
+void generate_func_def_retval_assign(int i);
+
+void ret_binop_arg();
+
+void generate_binop_assignment(ast_node_t *rvalue);
+
+void generate_unop_assignment(ast_node_t *rvalue);
+
+void generate_result();
+
+void process_return_node(ast_node_t *return_node);
+
+void generate_declaration(symbol_t *symbol);
+
+void generate_move(symbol_t *symbol);
+
+void look_for_declarations(ast_node_t *root);
+
+//Assignments
+
+void generate_integer_assignment(ast_node_t *rvalue);
+
+void generate_id_assignment(ast_node_t *rvalue);
+
+void generate_number_assignment(ast_node_t *rvalue);
+
+void generate_bool_assignment(ast_node_t *rvalue);
+
+void generate_string_assignment(ast_node_t *rvalue);
+
+void generate_nil_assignment();
+
+void generate_func_call_assignment_decl(ast_node_t *rvalue);
+
+
+
+
+
+
 
 static uint64_t hash(const char *key)
 {
@@ -14,13 +222,6 @@ static uint64_t hash(const char *key)
     return h;
 }
 
-#define OUTPUT_CODE_LINE(code) printf("%s\n", code)
-
-#define OUTPUT_CODE_PART(code) printf("%s", code)
-
-#define EMPTY_LINE printf("\n")
-
-#define COMMENT(comm) printf("#%s\n", comm)
 
 void exponent_float_to_integer()
 {
@@ -31,11 +232,9 @@ void exponent_float_to_integer()
     OUTPUT_CODE_LINE("RETURN");
 }
 
-#include <stdio.h>
-#include "ctype.h"
 
-void look_for_declarations(ast_node_t *root);
-void process_node_func_call(ast_node_t *cur_node);
+
+
 int global_label_counter = 0;
 
 void output_label(int label_counter)
@@ -62,12 +261,6 @@ void process_string(char *s)
 }
 
 static int global_func_counter = 0;
-
-/*
-
-local a : integer = 4
-
-*/
 
 void process_binop_node(ast_node_t *binop_node);
 void process_unop_node(ast_node_t *unop_node);
@@ -96,15 +289,7 @@ int count_children(ast_node_list_t children_list)
     return counter;
 }
 
-// FUNC CALL GENERATING
 
-void generate_func_call_argument_push(int i)
-{
-    OUTPUT_CODE_PART("DEFVAR TF@%");
-    printf("%d\n", i);
-    OUTPUT_CODE_PART("MOVE TF@%");
-    printf("%d ", i);
-}
 
 void push_integer_arg(uint64_t integer)
 {
@@ -171,7 +356,6 @@ void generate_write(int arg_count)
     }
 }
 
-// FUNC DEF GENERATING START
 void generate_func_start(char *function_name)
 {
     OUTPUT_CODE_PART("LABEL $");
@@ -204,9 +388,7 @@ hashtable_t declarations;
 
 void process_node_func_def(ast_node_t *cur_node)
 {
-    // printf("Processing func def node.\n");
     generate_func_start(cur_node->func_def.name.ptr);
-    // printf("generated head\n");
 
     ast_node_t *arg = cur_node->func_def.arguments;
     int arg_counter = 0;
@@ -246,13 +428,12 @@ void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter)
                                // function and pad with nil if an argument is missing.
 
         int ret_count = count_children(rvalue->func_call.def->return_types);
-        // printf("********* %d\n ***********",ret_count);
-        // printf("\n**************** %d %d *****************\n",ret_count,lside_counter);
+
         for(int i = 0; i < ret_count; i++) {
             OUTPUT_CODE_PART("PUSHS TF@retval");
             printf("%d\n", ret_count - 1 - i); // Push all children.
         }
-        // printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
+
         for(int k = 0; k < lside_counter - ret_count; k++) { // If need be, pad with nils
             OUTPUT_CODE_LINE("PUSHS nil@nil");
         }
@@ -271,19 +452,18 @@ void generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
                                // function and pad with nil if an argument is missing.
 
         int ret_count = count_children(rvalue->func_call.def->return_types);
-        // printf("\n**************** %d %d *****************\n",ret_count,lside_counter);
+
         for(int i = 0; i < ret_count; i++) {
             OUTPUT_CODE_PART("PUSHS TF@retval");
             printf("%d\n", i); // Push all children.
         }
-        // printf("LSIDE %d..... RET_COUNT %d\n",lside_counter,ret_count);
+
         for(int k = 0; k < lside_counter - ret_count; k++) { // If need be, pad with nils
             OUTPUT_CODE_LINE("PUSHS nil@nil");
         }
     }
 }
 
-// PROCESSING ASSIGNMENT NODE
 
 void generate_integer_push(ast_node_t *rvalue)
 {
@@ -322,7 +502,6 @@ void generate_nil_push()
 {
     printf("nil@nil\n");
 }
-// FUNC DEF GENERATING END
 
 void ret_integer_arg(uint64_t integer)
 {
@@ -384,8 +563,6 @@ void generate_unop_assignment(ast_node_t *rvalue)
     process_unop_node(rvalue);
     OUTPUT_CODE_LINE("POPS GF@result");
 }
-
-void process_binop_node(ast_node_t *binop_node);
 
 void process_unop_node(ast_node_t *unop_node)
 {
@@ -617,30 +794,30 @@ void process_return_node(ast_node_t *return_node)
             switch(cur_retval->node_type) {
             case AST_NODE_SYMBOL:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_symbol_push(cur_retval); // done
+                generate_symbol_push(cur_retval); 
                 break;
             case AST_NODE_INTEGER:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_integer_push(cur_retval); // done
+                generate_integer_push(cur_retval);
                 break;
             case AST_NODE_NUMBER:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_number_push(cur_retval); // done
+                generate_number_push(cur_retval); 
                 break;
             case AST_NODE_BOOLEAN:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_bool_push(cur_retval); // done
+                generate_bool_push(cur_retval);
                 break;
             case AST_NODE_STRING:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_string_push(cur_retval); // done
+                generate_string_push(cur_retval); 
                 break;
             case AST_NODE_NIL:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_nil_push(); // done
+                generate_nil_push();
                 break;
             case AST_NODE_FUNC_CALL:
-                // printf("\n\nThere is a func call node in return node body.\n\n");
+
                 generate_func_call_assignment(cur_retval, lside_counter - rside_counter);
                 break;
             case AST_NODE_BINOP:
@@ -700,7 +877,7 @@ void generate_string_assignment(ast_node_t *rvalue)
 {
     OUTPUT_CODE_PART("string@");
     process_string(rvalue->string.ptr);
-    OUTPUT_CODE_LINE(""); // prerobit
+    OUTPUT_CODE_LINE("");
 }
 
 void generate_nil_assignment()
@@ -742,33 +919,33 @@ void process_declaration_node(ast_node_t *cur_node, bool is_in_loop)
     }
     if(!rvalue) {
         generate_move(&cur_node->declaration.symbol);
-        generate_nil_assignment(); // done
+        generate_nil_assignment();
         return;
     } else {
         switch(rvalue->node_type) {
         case AST_NODE_SYMBOL:
             generate_move(&cur_node->declaration.symbol);
-            generate_id_assignment(rvalue); // done
+            generate_id_assignment(rvalue);
             break;
         case AST_NODE_INTEGER:
             generate_move(&cur_node->declaration.symbol);
-            generate_integer_assignment(rvalue); // done
+            generate_integer_assignment(rvalue);
             break;
         case AST_NODE_NUMBER:
             generate_move(&cur_node->declaration.symbol);
-            generate_number_assignment(rvalue); // done
+            generate_number_assignment(rvalue);
             break;
         case AST_NODE_BOOLEAN:
             generate_move(&cur_node->declaration.symbol);
-            generate_bool_assignment(rvalue); // done
+            generate_bool_assignment(rvalue);
             break;
         case AST_NODE_STRING:
             generate_move(&cur_node->declaration.symbol);
-            generate_string_assignment(rvalue); // done
+            generate_string_assignment(rvalue);
             break;
         case AST_NODE_NIL:
             generate_move(&cur_node->declaration.symbol);
-            generate_nil_assignment(); // done
+            generate_nil_assignment();
             break;
         case AST_NODE_FUNC_CALL:
             generate_func_call_assignment_decl(rvalue);
@@ -813,27 +990,27 @@ void process_assignment_node(ast_node_t *cur_node)
                 switch(expression->node_type) {
                 case AST_NODE_SYMBOL:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_symbol_push(expression); // done
+                    generate_symbol_push(expression); 
                     break;
                 case AST_NODE_INTEGER:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_integer_push(expression); // done
+                    generate_integer_push(expression);
                     break;
                 case AST_NODE_NUMBER:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_number_push(expression); // done
+                    generate_number_push(expression);
                     break;
                 case AST_NODE_BOOLEAN:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_bool_push(expression); // done
+                    generate_bool_push(expression);
                     break;
                 case AST_NODE_STRING:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_string_push(expression); // done
+                    generate_string_push(expression);
                     break;
                 case AST_NODE_NIL:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_nil_push(); // done
+                    generate_nil_push(); 
                     break;
                 case AST_NODE_FUNC_CALL:
                     generate_func_call_assignment_RL(expression,
@@ -875,7 +1052,6 @@ void process_node_func_call(ast_node_t *cur_node)
             lside_counter = count_children(cur_node->func_call.decl->argument_types);
         }
     } else { // If it's write()
-        // TODO do vysledkov zaratat aj pocet argumentov, ktore vrati funkcia na konci writu
         lside_counter = count_children(cur_node->func_call.arguments);
     }
     int rside_counter = 0;
@@ -886,27 +1062,27 @@ void process_node_func_call(ast_node_t *cur_node)
         switch(cur_arg->node_type) {
         case AST_NODE_SYMBOL:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_symbol_push(cur_arg); // done
+            generate_symbol_push(cur_arg); 
             break;
         case AST_NODE_INTEGER:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_integer_push(cur_arg); // done
+            generate_integer_push(cur_arg);
             break;
         case AST_NODE_NUMBER:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_number_push(cur_arg); // done
+            generate_number_push(cur_arg);
             break;
         case AST_NODE_BOOLEAN:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_bool_push(cur_arg); // done
+            generate_bool_push(cur_arg);
             break;
         case AST_NODE_STRING:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_string_push(cur_arg); // done
+            generate_string_push(cur_arg);
             break;
         case AST_NODE_NIL:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_nil_push(); // done
+            generate_nil_push();
             break;
         case AST_NODE_FUNC_CALL:
             if(cur_arg->func_call.def) {
@@ -1161,10 +1337,8 @@ void generate_if_code(ast_node_t *condition, ast_node_t *body, int local_label_c
 
 void process_if_node(ast_node_t *cur_node, int break_label)
 {
-    // inkrementuj label counter
     global_label_counter++;
     int local_label_counter = global_label_counter;
-    // lokalna hodnota label counteru
     ast_node_t *condition = cur_node->if_condition.conditions;
     ast_node_t *body = cur_node->if_condition.bodies;
     while(condition != NULL) {
@@ -1237,7 +1411,6 @@ void process_repeat_until(ast_node_t *cur_node)
 
 void process_node(ast_node_t *cur_node, int break_label)
 {
-    // printf("Processing node\n");
     switch(cur_node->node_type) {
     case AST_NODE_INVALID:
         break;
@@ -1320,7 +1493,6 @@ void look_for_declarations(ast_node_t *root)
 
     switch(root->node_type) {
     case AST_NODE_DECLARATION:
-        // if not already declared, do this: TODO
         process_declaration_node(root, true);
         break;
     case AST_NODE_BODY: {
@@ -1457,10 +1629,6 @@ void generate_ord()
     OUTPUT_CODE_LINE("LABEL ORD_END");
     OUTPUT_CODE_LINE("POPFRAME");
     OUTPUT_CODE_LINE("RETURN");
-}
-
-void check_type()
-{
 }
 
 void int_zerodivcheck()
@@ -1693,7 +1861,7 @@ void exponentiation()
     OUTPUT_CODE_LINE("JUMP EXP_LOOP_START");
 
     OUTPUT_CODE_LINE("LABEL EXP_LOOP_END");
-    OUTPUT_CODE_LINE("JUMPIFEQ EXIT_EXP_LOOP GF@stackresult bool@false"); //
+    OUTPUT_CODE_LINE("JUMPIFEQ EXIT_EXP_LOOP GF@stackresult bool@false");
     OUTPUT_CODE_LINE("POPS GF@result");
     OUTPUT_CODE_LINE("PUSHS float@0x1p+0");
     OUTPUT_CODE_LINE("PUSHS GF@result");
@@ -1713,7 +1881,7 @@ void exponentiation()
 
 void generate_builtin()
 {
-    // VSTAVANE
+    // Builtin functions
     generate_reads();
     EMPTY_LINE;
     generate_readi();
@@ -1728,7 +1896,7 @@ void generate_builtin()
     EMPTY_LINE;
     generate_substring();
 
-    // MOJE
+    // My functions
     EMPTY_LINE;
     int_zerodivcheck();
     EMPTY_LINE;
