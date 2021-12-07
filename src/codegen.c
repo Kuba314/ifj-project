@@ -111,7 +111,8 @@ void process_node_func_def(ast_node_t *cur_node);
 
 void process_return_node(ast_node_t *return_node);
 
-// Additional helping functions
+
+//Additional helping functions
 void process_string(char *s);
 
 void look_for_declarations(ast_node_t *root);
@@ -720,6 +721,7 @@ void process_binop_node(ast_node_t *binop_node)
 
         */
         OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        OUTPUT_CODE_LINE("CALL CONV_TO_INT");
         OUTPUT_CODE_LINE("CALL int_zerodivcheck");
         OUTPUT_CODE_LINE("POPS GF@op2");
         OUTPUT_CODE_LINE("POPS GF@op1"); // Saving A and B
@@ -1491,6 +1493,10 @@ void process_node(ast_node_t *cur_node, int break_label)
         process_while_node(cur_node);
         break;
 
+    case AST_NODE_REPEAT:
+        process_while_node(cur_node);
+        break;
+
     case AST_NODE_FOR:
         process_for_node(cur_node);
         break;
@@ -1618,6 +1624,7 @@ void generate_chr()
 
     OUTPUT_CODE_LINE("LT GF@result LF@%param0 int@0");
     OUTPUT_CODE_LINE("JUMPIFEQ CHR_OUT GF@result bool@true");
+
 
     OUTPUT_CODE_LINE("JUMP CHR_OK");
     OUTPUT_CODE_LINE("LABEL CHR_OUT");
@@ -1915,6 +1922,34 @@ void exponentiation()
     OUTPUT_CODE_LINE("EXIT int@6");
 }
 
+void conv_to_int()
+{
+    OUTPUT_CODE_LINE("LABEL CONV_TO_INT");
+    OUTPUT_CODE_LINE("POPS GF@op2");
+    OUTPUT_CODE_LINE("POPS GF@op1");
+    OUTPUT_CODE_LINE("TYPE GF@type1 GF@op1");
+    OUTPUT_CODE_LINE("TYPE GF@type2 GF@op2");
+
+    OUTPUT_CODE_LINE("JUMPIFEQ FIRST_OP_FLOAT_conv GF@type1 string@float");
+    OUTPUT_CODE_LINE("JUMPIFEQ SEC_OP_FLOAT_conv GF@type2 string@float");
+    OUTPUT_CODE_LINE("JUMP INT_DONE");
+    OUTPUT_CODE_LINE("LABEL FIRST_OP_FLOAT_conv");
+    OUTPUT_CODE_LINE("FLOAT2INT GF@op1 GF@op1");
+    OUTPUT_CODE_LINE("JUMPIFEQ SEC_OP_FLOAT_conv GF@type2 string@float");
+    OUTPUT_CODE_LINE("JUMP INT_DONE");
+
+    OUTPUT_CODE_LINE("LABEL SEC_OP_FLOAT_conv");
+    OUTPUT_CODE_LINE("FLOAT2INT GF@op2 GF@op2");
+    OUTPUT_CODE_LINE("JUMP INT_DONE");
+
+    OUTPUT_CODE_LINE("LABEL INT_DONE");
+    OUTPUT_CODE_LINE("PUSHS GF@op1");
+    OUTPUT_CODE_LINE("PUSHS GF@op2");
+    OUTPUT_CODE_LINE("RETURN");
+}
+
+
+
 void generate_builtin()
 {
     // Builtin functions
@@ -1970,6 +2005,8 @@ void generate_builtin()
     for_convert();
     EMPTY_LINE;
     should_i_jump();
+    EMPTY_LINE;
+    conv_to_int();
     EMPTY_LINE;
 }
 
