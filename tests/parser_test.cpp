@@ -54,7 +54,7 @@ class ParserTests : public ::testing::Test {
             throw std::bad_alloc();
         }
 
-        if(sem_init()) {
+        if(semantics_init()) {
             throw std::bad_alloc();
         }
 
@@ -68,7 +68,7 @@ class ParserTests : public ::testing::Test {
     virtual void TearDown() override
     {
         free_ast(ast);
-        sem_free();
+        semantics_free();
         parser_free();
         scanner_free();
     }
