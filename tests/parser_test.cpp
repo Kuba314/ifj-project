@@ -73,7 +73,7 @@ class ParserTests : public ::testing::Test {
         scanner_free();
     }
 
-    ast_node_t *ast;
+    ast_node_t *ast = NULL;
 };
 
 // these have to be macros, because ASSERT_ doesn't exit, it just returns
@@ -106,9 +106,9 @@ void check_arg_names(ast_func_def_t func_def, ...)
     const char *arg_name = va_arg(args, const char *);
     while(arg_list != nullptr || arg_name != nullptr) {
         if(arg_list == nullptr) {
-            EXPECT_NE(arg_list, nullptr);
+            ASSERT_NE(arg_list, nullptr);
         } else if(arg_name == nullptr) {
-            EXPECT_NE(arg_name, nullptr);
+            ASSERT_NE(arg_name, nullptr);
         }
 
         EXPECT_EQ(arg_list->node_type, AST_NODE_SYMBOL);
@@ -130,9 +130,9 @@ void check_arg_types(ast_func_def_t func_def, ...)
     type_t arg_type = (type_t) va_arg(args, int);
     while(arg_list != nullptr || arg_type != TYPE_NIL) {
         if(arg_list == nullptr) {
-            EXPECT_NE(arg_list, nullptr);
+            ASSERT_NE(arg_list, nullptr);
         } else if(arg_type == TYPE_NIL) {
-            EXPECT_NE(arg_type, TYPE_NIL);
+            ASSERT_NE(arg_type, TYPE_NIL);
         }
 
         EXPECT_EQ(arg_list->node_type, AST_NODE_SYMBOL);
@@ -153,9 +153,9 @@ void check_type_list(ast_node_t *type_it, ...)
     type_t arg_type = (type_t) va_arg(args, int);
     while(type_it != nullptr || arg_type != TYPE_NIL) {
         if(type_it == nullptr) {
-            EXPECT_NE(type_it, nullptr);
+            ASSERT_NE(type_it, nullptr);
         } else if(arg_type == TYPE_NIL) {
-            EXPECT_NE(arg_type, TYPE_NIL);
+            ASSERT_NE(arg_type, TYPE_NIL);
         }
 
         EXPECT_EQ(type_it->node_type, AST_NODE_TYPE);
@@ -198,6 +198,8 @@ TEST_F(ParserTests, Add)
     check_sym_node(ret_values_it->binop.right, "b%1");
 
     global_it = global_it->next;
+
+    ASSERT_NE(global_it, nullptr);
 
     ast_func_def_t func_def2 = global_it->func_def;
 
