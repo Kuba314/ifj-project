@@ -845,6 +845,7 @@ void process_return_node(ast_node_t *return_node)
                 returned_from_function=generate_func_call_assignment(cur_retval, lside_counter - rside_counter);
                 rside_counter=rside_counter+returned_from_function-1;
                 i=i+returned_from_function-1;
+                break;
             case AST_NODE_BINOP:
                 generate_binop_assignment(cur_retval);
                 OUTPUT_CODE_PART("PUSHS ");
@@ -1146,7 +1147,6 @@ void process_node_func_call(ast_node_t *cur_node)
     for(int j = 0; j < rside_counter - lside_counter; j++) {
         OUTPUT_CODE_LINE("POPS GF@trash"); // Losing unwanted expression results.
     }
-
     OUTPUT_CODE_LINE("CREATEFRAME");
     if(!strcmp(cur_node->func_call.name.ptr, "write")) {
         lside_counter = lside_counter - 1 + added_to_write;
@@ -1637,6 +1637,7 @@ void generate_chr()
     OUTPUT_CODE_LINE("JUMP CHR_END");
     OUTPUT_CODE_LINE("LABEL CHR_OK");
     OUTPUT_CODE_LINE("INT2CHAR LF@retval0 LF@%param0");
+    OUTPUT_CODE_LINE("LABEL CHR_END");
     OUTPUT_CODE_LINE("POPFRAME");
     OUTPUT_CODE_LINE("RETURN");
 
