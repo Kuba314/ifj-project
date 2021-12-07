@@ -427,7 +427,13 @@ void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter)
     if(rvalue->next == NULL) { // We can return more than one value if the last item in list is
                                // function and pad with nil if an argument is missing.
 
-        int ret_count = count_children(rvalue->func_call.def->return_types);
+        int ret_count;
+        if(rvalue->func_call.def){
+            ret_count = count_children(rvalue->func_call.def->return_types);
+        }
+        else{
+            ret_count = count_children(rvalue->func_call.decl->return_types);
+        }
 
         for(int i = 0; i < ret_count; i++) {
             OUTPUT_CODE_PART("PUSHS TF@retval");
@@ -446,6 +452,7 @@ int generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
     if(rvalue->next) { // If the func call is not the last in assignment right side, only the first
                        // retval is used.
         OUTPUT_CODE_LINE("PUSHS TF@retval0");
+        return 0;
     }
 
     if(rvalue->next == NULL) { // We can return more than one value if the last item in list is
@@ -595,6 +602,8 @@ void process_unop_node(ast_node_t *unop_node)
         OUTPUT_CODE_LINE("CALL CONV_CHECK");
         OUTPUT_CODE_LINE("MULS");
         break;
+    default:
+            break;
     }
 }
 // binop_node->binop.type == AST_NODE_BINOP_OR
@@ -789,6 +798,8 @@ void process_binop_node(ast_node_t *binop_node)
         OUTPUT_CODE_LINE("CONCAT GF@result GF@string0 GF@string1");
         OUTPUT_CODE_LINE("PUSHS GF@result");
         break;
+    default:
+            break;
     }
 }
 
