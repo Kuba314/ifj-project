@@ -14,7 +14,7 @@
 
 #ifdef DBG
 
-static int dbgseverity = 6;
+static int dbgseverity = 7;
 
     #define PRINT(severity, ...)                                                                   \
         if(severity >= dbgseverity) {                                                              \
@@ -376,12 +376,12 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
         stack_element_t *e = deque_front(stack);
         if(!e || e->mark) {
             DPRINT(8, "[INTERNAL, PREC_PARSER] Syntax error: sequence underflow.\n");
-            return E_SYN;
+            return E_SEM;
         }
 
         if(!rule->list[i](e)) {
             DPRINT(8, "[INTERNAL, PREC_PARSER] Syntax error: wrong nut. \n");
-            return E_SYN;
+            return E_SEM;
         }
 
         deque_pop_front(stack);
@@ -393,7 +393,7 @@ static int execute_rule(int id, deque_t *stack, const rule_t *rule, adt_stack_t 
     print_element(e, sen, 1);
     if(!e->mark) {
         DPRINT(8, "[INTERNAL, PREC_PARSER] Syntax error: sequence overflow.\n");
-        return E_SYN;
+        return E_SEM;
     }
     e->mark = false;
 
@@ -460,8 +460,6 @@ static int parser_shift(deque_t *stack, token_t *current, int *level, int depth,
     dbg_print(stack, depth, 1);
     return prec_get_next_token(current, level);
 }
-
-static int dbgcount = 0;
 
 static bool check_condition(deque_t *stack, int depth, stack_element_t *sentinel)
 {
@@ -670,10 +668,10 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         }
         dbg_print(stack, depth, 1);
 
-        if(++dbgcount == 1337) { // temp
-            DPRINT(9, "[precdence parser safeguard] LOOP LIMIT REACHED\n");
-            exit(1);
-        }
+        //        if(++dbgcount == 1337) {
+        //            DPRINT(9, "[precdence parser safeguard] LOOP LIMIT REACHED\n");
+        //            exit(1);
+        //        }
     }
 
     if(top != sentinel) {
@@ -692,7 +690,6 @@ static int assemble_ast(adt_stack_t *right_analysis, ast_node_t **node, stack_el
     if(stack_empty(right_analysis)) {
         return E_INT;
     }
-    *node = calloc(1, sizeof(ast_node_t));
 
     element_array_t *a = (element_array_t *) stack_pop(right_analysis);
     DPRINT(3, "  Rule %d: {\n", a->id);
@@ -706,6 +703,10 @@ static int assemble_ast(adt_stack_t *right_analysis, ast_node_t **node, stack_el
         }
     }
     DPRINT(3, "  }\n");
+
+    if(a->id != RULE_FUNC_CALL) {
+        *node = calloc(1, sizeof(ast_node_t));
+    }
 
     switch(a->id) {
     case RULE_UNOP:
@@ -818,10 +819,8 @@ int precedence_parse(ast_node_t **root)
         DPRINT(5, "}\n");
 
         // r = sem_check_expression(*root);
-    } else if(r == E_SYN) {
-        DPRINT(5, "Parse syntax error\n");
     } else if(r == E_SEM) {
-        DPRINT(5, "Parse exp semantic error\n");
+        fprintf(stderr, "parser: error: couldn't parse expression.\n");
     }
 
     free_parser_bottom_up(&stack, &right_analysis, sentinel);
