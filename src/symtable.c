@@ -41,10 +41,8 @@ int symtable_init()
 
 void symtable_free()
 {
-    deque_element_t *it = deque_front_element(&scopes);
-    while(it) {
-        free_scope(it->data);
-        it = it->next;
+    while(!deque_empty(&scopes)) {
+        free_scope(deque_pop_front(&scopes));
     }
     deque_free(&scopes);
 }
