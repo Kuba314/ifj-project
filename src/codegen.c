@@ -1621,7 +1621,6 @@ void generate_chr()
 
 
     OUTPUT_CODE_LINE("JUMPIFEQ CHR_NIL LF@%param0 nil@nil"); // if i is nil
-    OUTPUT_CODE_LINE("JUMPIFEQ CHR_NIL LF@%param1 nil@nil"); // if j is nil
 
     OUTPUT_CODE_LINE("GT GF@result LF@%param0 int@255");
     OUTPUT_CODE_LINE("JUMPIFEQ CHR_OUT GF@result bool@true");
