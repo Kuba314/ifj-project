@@ -9,3 +9,5 @@ function pad(str: string, n_spaces: integer)
 
     write(str)
 end
+
+pad("hello\n", 10)
