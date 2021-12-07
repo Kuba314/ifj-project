@@ -13,7 +13,6 @@
 
 #define alloc_error() fprintf(stderr, "error: not enough memory\n");
 
-
 #ifdef DBG
 
 static int dbgseverity = 6;
@@ -41,7 +40,6 @@ static int dbgseverity = 6;
         } while(0);
 
 #endif
-
 
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
 {
