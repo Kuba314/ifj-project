@@ -231,7 +231,6 @@ TEST_F(ParserTests, Add)
 
     EXPECT_EQ(ret_values_it2->next, nullptr);
     EXPECT_EQ(statement_it2->next, nullptr);
-    EXPECT_EQ(global_it->next, nullptr);
 }
 TEST_F(ParserTests, Pad)
 {
