@@ -111,8 +111,7 @@ void process_node_func_def(ast_node_t *cur_node);
 
 void process_return_node(ast_node_t *return_node);
 
-
-//Additional helping functions
+// Additional helping functions
 void process_string(char *s);
 
 void look_for_declarations(ast_node_t *root);
@@ -1622,7 +1621,6 @@ void generate_chr()
 
     OUTPUT_CODE_LINE("LT GF@result LF@%param0 int@0");
     OUTPUT_CODE_LINE("JUMPIFEQ CHR_OUT GF@result bool@true");
-
 
     OUTPUT_CODE_LINE("JUMP CHR_OK");
     OUTPUT_CODE_LINE("LABEL CHR_OUT");
