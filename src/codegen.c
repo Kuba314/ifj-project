@@ -646,6 +646,8 @@ void process_binop_node(ast_node_t *binop_node)
             process_node_func_call(binop_node);
             OUTPUT_CODE_LINE("PUSHS TF@retval0");
             break;
+        default:
+            break;
         }
         return;
     }
@@ -812,6 +814,8 @@ void process_return_node(ast_node_t *return_node)
                 OUTPUT_CODE_PART("PUSHS ");
                 generate_result();
                 break;
+            default:
+                break;
             }
             rside_counter++;
             cur_retval = cur_retval->next;
@@ -944,6 +948,8 @@ void process_declaration_node(ast_node_t *cur_node, bool is_in_loop)
             generate_move(&cur_node->declaration.symbol);
             generate_result();
             break;
+        default:
+            break;
         }
     }
 }
@@ -1007,6 +1013,8 @@ void process_assignment_node(ast_node_t *cur_node)
                     generate_unop_assignment(expression);
                     OUTPUT_CODE_PART("PUSHS ");
                     generate_result();
+                    break;
+                default:
                     break;
                 }
             }
@@ -1083,6 +1091,8 @@ void process_node_func_call(ast_node_t *cur_node)
             generate_unop_assignment(cur_arg);
             OUTPUT_CODE_PART("PUSHS ");
             generate_result();
+            break;
+        default:
             break;
         }
         rside_counter++;
@@ -1503,6 +1513,8 @@ void look_for_declarations(ast_node_t *root)
         look_for_declarations(root->for_loop.condition);
         look_for_declarations(root->for_loop.step);
         look_for_declarations(root->for_loop.setup);
+        break;
+    default:
         break;
     }
 }
