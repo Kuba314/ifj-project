@@ -1,6 +1,5 @@
 #include "ast.h"
 
-
 /**
  * @brief Generates code from AST
  *

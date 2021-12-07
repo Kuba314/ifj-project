@@ -28,18 +28,17 @@
 
 #define COMMENT(comm) printf("#%s\n", comm)
 
-
-//Codegen initialization
+// Codegen initialization
 void avengers_assembler(ast_node_t *ast);
 
 void generate_header();
 
 void process_node_program(ast_node_t *cur_node);
 
-//All IFJcode21 premade code.
+// All IFJcode21 premade code.
 void generate_builtin();
 
-//Builtin functions
+// Builtin functions
 void generate_reads();
 
 void generate_readi();
@@ -54,7 +53,7 @@ void generate_ord();
 
 void generate_substring();
 
-//Additional builtin functions
+// Additional builtin functions
 void int_zerodivcheck();
 
 void float_zerodivcheck();
@@ -81,13 +80,10 @@ void eval_condition();
 
 void check_nil_write();
 
-
-
-
-//Main switch
+// Main switch
 void process_node(ast_node_t *cur_node, int break_label);
 
-//Following processing functions
+// Following processing functions
 void process_unop_node(ast_node_t *unop_node);
 
 void process_binop_node(ast_node_t *binop_node);
@@ -111,8 +107,7 @@ void process_repeat_until(ast_node_t *cur_node);
 
 void process_node_func_def(ast_node_t *cur_node);
 
-
-//Additional helping functions
+// Additional helping functions
 void process_string(char *s);
 
 void look_for_declarations(ast_node_t *root);
@@ -191,7 +186,7 @@ void generate_move(symbol_t *symbol);
 
 void look_for_declarations(ast_node_t *root);
 
-//Assignments
+// Assignments
 
 void generate_integer_assignment(ast_node_t *rvalue);
 
@@ -207,12 +202,6 @@ void generate_nil_assignment();
 
 void generate_func_call_assignment_decl(ast_node_t *rvalue);
 
-
-
-
-
-
-
 static uint64_t hash(const char *key)
 {
     uint64_t h = 0;
@@ -222,7 +211,6 @@ static uint64_t hash(const char *key)
     return h;
 }
 
-
 void exponent_float_to_integer()
 {
     OUTPUT_CODE_LINE("LABEL FLOAT_TO_INT_EXPONENT");
@@ -231,9 +219,6 @@ void exponent_float_to_integer()
     OUTPUT_CODE_LINE("PUSHS GF@RESULT");
     OUTPUT_CODE_LINE("RETURN");
 }
-
-
-
 
 int global_label_counter = 0;
 
@@ -288,8 +273,6 @@ int count_children(ast_node_list_t children_list)
     }
     return counter;
 }
-
-
 
 void push_integer_arg(uint64_t integer)
 {
@@ -463,7 +446,6 @@ void generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
         }
     }
 }
-
 
 void generate_integer_push(ast_node_t *rvalue)
 {
@@ -794,7 +776,7 @@ void process_return_node(ast_node_t *return_node)
             switch(cur_retval->node_type) {
             case AST_NODE_SYMBOL:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_symbol_push(cur_retval); 
+                generate_symbol_push(cur_retval);
                 break;
             case AST_NODE_INTEGER:
                 OUTPUT_CODE_PART("PUSHS ");
@@ -802,7 +784,7 @@ void process_return_node(ast_node_t *return_node)
                 break;
             case AST_NODE_NUMBER:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_number_push(cur_retval); 
+                generate_number_push(cur_retval);
                 break;
             case AST_NODE_BOOLEAN:
                 OUTPUT_CODE_PART("PUSHS ");
@@ -810,7 +792,7 @@ void process_return_node(ast_node_t *return_node)
                 break;
             case AST_NODE_STRING:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_string_push(cur_retval); 
+                generate_string_push(cur_retval);
                 break;
             case AST_NODE_NIL:
                 OUTPUT_CODE_PART("PUSHS ");
@@ -990,7 +972,7 @@ void process_assignment_node(ast_node_t *cur_node)
                 switch(expression->node_type) {
                 case AST_NODE_SYMBOL:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_symbol_push(expression); 
+                    generate_symbol_push(expression);
                     break;
                 case AST_NODE_INTEGER:
                     OUTPUT_CODE_PART("PUSHS ");
@@ -1010,7 +992,7 @@ void process_assignment_node(ast_node_t *cur_node)
                     break;
                 case AST_NODE_NIL:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_nil_push(); 
+                    generate_nil_push();
                     break;
                 case AST_NODE_FUNC_CALL:
                     generate_func_call_assignment_RL(expression,
@@ -1062,7 +1044,7 @@ void process_node_func_call(ast_node_t *cur_node)
         switch(cur_arg->node_type) {
         case AST_NODE_SYMBOL:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_symbol_push(cur_arg); 
+            generate_symbol_push(cur_arg);
             break;
         case AST_NODE_INTEGER:
             OUTPUT_CODE_PART("PUSHS ");
