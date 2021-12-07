@@ -11,6 +11,8 @@
 #include "error.h"
 #include "semantics.h"
 
+#define alloc_error() fprintf(stderr, "error: not enough memory\n");
+
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
 {
     while(*node_list) {
@@ -26,23 +28,11 @@ static ast_node_t **node_list_tail(ast_node_list_t *node_list)
     }
     return node_list;
 }
-static ast_node_t *alloc_sym_decl_node(string_t id)
+static ast_node_t *alloc_symbol_node(string_t id)
 {
     ast_node_t *node = calloc(1, sizeof(ast_node_t));
     if(node == NULL) {
-        return NULL;
-    }
-    node->node_type = AST_NODE_SYMBOL;
-
-    // other attributes will be filled in later
-    node->symbol.is_declaration = true;
-    node->symbol.name = id;
-    return node;
-}
-static ast_node_t *alloc_sym_use_node(string_t id)
-{
-    ast_node_t *node = calloc(1, sizeof(ast_node_t));
-    if(node == NULL) {
+        alloc_error();
         return NULL;
     }
     node->node_type = AST_NODE_SYMBOL;
@@ -56,6 +46,7 @@ static ast_node_t *alloc_type_node(type_t type)
 {
     ast_node_t *node = calloc(1, sizeof(ast_node_t));
     if(node == NULL) {
+        alloc_error();
         return NULL;
     }
     node->node_type = AST_NODE_TYPE;
@@ -66,6 +57,7 @@ static ast_node_t *alloc_break_node()
 {
     ast_node_t *node = calloc(1, sizeof(ast_node_t));
     if(node == NULL) {
+        alloc_error();
         return NULL;
     }
     node->node_type = AST_NODE_BREAK;
@@ -89,6 +81,7 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
 {
     bool error = false;
     static ast_node_t **last_root = NULL;
+    ast_node_t *new_node;
 
     switch(token.token_type) {
     case T_STRING:
@@ -113,10 +106,16 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
             break;
         // how do we handle scopes again?
         case NT_FOR_LOOP:
-            (*root)->for_loop.iterator = alloc_sym_decl_node(token.string);
+            (*root)->for_loop.iterator = alloc_symbol_node(token.string);
+            if((*root)->for_loop.iterator == NULL) {
+                return E_INT;
+            }
             break;
         case NT_IDENTIFIER_WITH_TYPE:
-            last_root = node_list_append(root, alloc_sym_decl_node(token.string));
+            if((new_node = alloc_symbol_node(token.string)) == NULL) {
+                return E_INT;
+            }
+            last_root = node_list_append(root, new_node);
             break;
         case NT_DECLARATION:
             (*root)->declaration.symbol.name = token.string;
@@ -124,7 +123,10 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
             break;
         case NT_IDENTIFIER_LIST:
         case NT_IDENTIFIER_LIST2:
-            node_list_append(root, alloc_sym_use_node(token.string));
+            if((new_node = alloc_symbol_node(token.string)) == NULL) {
+                return E_INT;
+            }
+            node_list_append(root, new_node);
             break;
         case NT_STATEMENT:
             // ignore, will be handled once we know if we're in assignment or func-call
@@ -137,11 +139,17 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
         switch(parent_nterm) {
         case NT_TYPE_LIST:
         case NT_TYPE_LIST2:
-            node_list_append(root, alloc_type_node(token.type));
+            if((new_node = alloc_type_node(token.type)) == NULL) {
+                return E_INT;
+            }
+            node_list_append(root, new_node);
             break;
         case NT_FUNC_TYPE_LIST:
         case NT_FUNC_TYPE_LIST2:
-            node_list_append(root, alloc_type_node(token.type));
+            if((new_node = alloc_type_node(token.type)) == NULL) {
+                return E_INT;
+            }
+            node_list_append(root, new_node);
             break;
         case NT_IDENTIFIER_WITH_TYPE:
             (*last_root)->symbol.type = token.type;
@@ -159,7 +167,10 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
         (*root)->visited_children++;
         break;
     case T_BREAK:
-        node_list_append(root, alloc_break_node());
+        if((new_node = alloc_break_node()) == NULL) {
+            return E_INT;
+        }
+        node_list_append(root, new_node);
     default:
         break;
     }
@@ -214,6 +225,7 @@ static int alloc_nterm(nterm_type_t nterm, ast_node_t **root, int depth)
     print(depth, "alloc %s", nterm_to_readable(nterm));
     *root = calloc(1, sizeof(ast_node_t));
     if(*root == NULL) {
+        alloc_error();
         return E_INT;
     }
     (*root)->node_type = node_type;
@@ -304,16 +316,12 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
     case NT_RETURN_STATEMENT:
         return &(*root)->return_values.values;
 
-    // case NT_IDENTIFIER_WITH_TYPE:
-    // case NT_DECL_OPTIONAL_ASSIGNMENT:
-    // case NT_IDENTIFIER_LIST_WITH_TYPES:
-    // case NT_TYPE_LIST:
-    // case NT_FUNC_TYPE_LIST:
-    // case NT_RET_EXPRESSION_LIST:
-    // case NT_IDENTIFIER_LIST_WITH_TYPES2:
-    // case NT_TYPE_LIST2:
-    // case NT_FUNC_TYPE_LIST2:
-    // case NT_FUN_EXPRESSION_LIST2:
+    case NT_TYPE_LIST:
+    case NT_TYPE_LIST2:
+    case NT_FUNC_TYPE_LIST:
+    case NT_FUNC_TYPE_LIST2:
+    case NT_IDENTIFIER_LIST_WITH_TYPES:
+    case NT_IDENTIFIER_LIST_WITH_TYPES2:
     case NT_OPT_RETURN_STATEMENT:
     case NT_GLOBAL_STATEMENT_LIST:
     case NT_OPTIONAL_FUN_EXPRESSION_LIST:
@@ -328,9 +336,11 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
         return node_list_tail(root);
 
     // explicit fall throughs
-    case NT_OPTIONAL_FOR_STEP: // stay at for node
-    case NT_STATEMENT:         // wait for certain keyword to distinguish asts
-    case NT_GLOBAL_STATEMENT:  // wait for certain keyword to distinguish asts
+    case NT_IDENTIFIER_WITH_TYPE:     // stay at symbol node
+    case NT_DECL_OPTIONAL_ASSIGNMENT: // stay at declaration node
+    case NT_OPTIONAL_FOR_STEP:        // stay at for node
+    case NT_STATEMENT:                // wait for certain keyword to distinguish asts
+    case NT_GLOBAL_STATEMENT:         // wait for certain keyword to distinguish asts
         return root;
     default:
         fprintf(stderr, "warn: fall through %s\n", nterm_to_readable(nterm));
@@ -395,13 +405,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
         // call recursively if nterm
         if(expected.is_nterm) {
             ast_node_t **ref = get_node_ref(root, nterm, depth);
-            if(ref == NULL) {
-                fprintf(stderr, "error: parser-int: %s returned a null ref\n",
-                        nterm_to_readable(nterm));
-                return E_INT;
-            }
-            int err = parse(expected.nterm, ref, depth + 1);
-            if(err) {
+            if((err = parse(expected.nterm, ref, depth + 1))) {
                 return err;
             }
         } else {
