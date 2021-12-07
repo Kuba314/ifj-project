@@ -19,6 +19,8 @@
 #include <string.h>
 #include <ctype.h>
 #include "hashtable_bst.h"
+#include "semantics.h"
+#include "optimizations.h"
 
 #define OUTPUT_CODE_LINE(code) printf("%s\n", code)
 
@@ -28,18 +30,17 @@
 
 #define COMMENT(comm) printf("#%s\n", comm)
 
-
-//Codegen initialization
+// Codegen initialization
 void avengers_assembler(ast_node_t *ast);
 
 void generate_header();
 
 void process_node_program(ast_node_t *cur_node);
 
-//All IFJcode21 premade code.
+// All IFJcode21 premade code.
 void generate_builtin();
 
-//Builtin functions
+// Builtin functions
 void generate_reads();
 
 void generate_readi();
@@ -54,7 +55,7 @@ void generate_ord();
 
 void generate_substring();
 
-//Additional builtin functions
+// Additional builtin functions
 void int_zerodivcheck();
 
 void float_zerodivcheck();
@@ -81,13 +82,10 @@ void eval_condition();
 
 void check_nil_write();
 
-
-
-
-//Main switch
+// Main switch
 void process_node(ast_node_t *cur_node, int break_label);
 
-//Following processing functions
+// Following processing functions
 void process_unop_node(ast_node_t *unop_node);
 
 void process_binop_node(ast_node_t *binop_node);
@@ -113,8 +111,7 @@ void process_node_func_def(ast_node_t *cur_node);
 
 void process_return_node(ast_node_t *return_node);
 
-
-//Additional helping functions
+// Additional helping functions
 void process_string(char *s);
 
 void look_for_declarations(ast_node_t *root);
@@ -191,7 +188,7 @@ void generate_move(symbol_t *symbol);
 
 void look_for_declarations(ast_node_t *root);
 
-//Assignments
+// Assignments
 
 void generate_integer_assignment(ast_node_t *rvalue);
 
@@ -207,12 +204,6 @@ void generate_nil_assignment();
 
 void generate_func_call_assignment_decl(ast_node_t *rvalue);
 
-
-
-
-
-
-
 static uint64_t hash(const char *key)
 {
     uint64_t h = 0;
@@ -222,7 +213,6 @@ static uint64_t hash(const char *key)
     return h;
 }
 
-
 void exponent_float_to_integer()
 {
     OUTPUT_CODE_LINE("LABEL FLOAT_TO_INT_EXPONENT");
@@ -231,9 +221,6 @@ void exponent_float_to_integer()
     OUTPUT_CODE_LINE("PUSHS GF@RESULT");
     OUTPUT_CODE_LINE("RETURN");
 }
-
-
-
 
 int global_label_counter = 0;
 
@@ -267,6 +254,15 @@ void process_unop_node(ast_node_t *unop_node);
 void process_node(ast_node_t *cur_node, int break_label);
 void generate_result();
 
+void print_symbol(symbol_t *symbol)
+{
+
+    char *name;
+    get_id_name(symbol, &name);
+
+    printf("%s", name);
+}
+
 bool get_id_name(symbol_t *node_symbol, char **name)
 {
     if(node_symbol->is_declaration) {
@@ -288,8 +284,6 @@ int count_children(ast_node_list_t children_list)
     }
     return counter;
 }
-
-
 
 void push_integer_arg(uint64_t integer)
 {
@@ -428,10 +422,9 @@ void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter)
                                // function and pad with nil if an argument is missing.
 
         int ret_count;
-        if(rvalue->func_call.def){
+        if(rvalue->func_call.def) {
             ret_count = count_children(rvalue->func_call.def->return_types);
-        }
-        else{
+        } else {
             ret_count = count_children(rvalue->func_call.decl->return_types);
         }
 
@@ -456,12 +449,11 @@ int generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
     }
 
     else { // We can return more than one value if the last item in list is
-                               // function and pad with nil if an argument is missing.
+           // function and pad with nil if an argument is missing.
         int ret_count;
-        if(rvalue->func_call.def){
+        if(rvalue->func_call.def) {
             ret_count = count_children(rvalue->func_call.def->return_types);
-        }
-        else{
+        } else {
             ret_count = count_children(rvalue->func_call.decl->return_types);
         }
 
@@ -476,7 +468,6 @@ int generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
         return ret_count;
     }
 }
-
 
 void generate_integer_push(ast_node_t *rvalue)
 {
@@ -603,7 +594,7 @@ void process_unop_node(ast_node_t *unop_node)
         OUTPUT_CODE_LINE("MULS");
         break;
     default:
-            break;
+        break;
     }
 }
 // binop_node->binop.type == AST_NODE_BINOP_OR
@@ -799,7 +790,7 @@ void process_binop_node(ast_node_t *binop_node)
         OUTPUT_CODE_LINE("PUSHS GF@result");
         break;
     default:
-            break;
+        break;
     }
 }
 
@@ -819,7 +810,7 @@ void process_return_node(ast_node_t *return_node)
             switch(cur_retval->node_type) {
             case AST_NODE_SYMBOL:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_symbol_push(cur_retval); 
+                generate_symbol_push(cur_retval);
                 break;
             case AST_NODE_INTEGER:
                 OUTPUT_CODE_PART("PUSHS ");
@@ -827,7 +818,7 @@ void process_return_node(ast_node_t *return_node)
                 break;
             case AST_NODE_NUMBER:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_number_push(cur_retval); 
+                generate_number_push(cur_retval);
                 break;
             case AST_NODE_BOOLEAN:
                 OUTPUT_CODE_PART("PUSHS ");
@@ -835,16 +826,17 @@ void process_return_node(ast_node_t *return_node)
                 break;
             case AST_NODE_STRING:
                 OUTPUT_CODE_PART("PUSHS ");
-                generate_string_push(cur_retval); 
+                generate_string_push(cur_retval);
                 break;
             case AST_NODE_NIL:
                 OUTPUT_CODE_PART("PUSHS ");
                 generate_nil_push();
                 break;
             case AST_NODE_FUNC_CALL:
-                returned_from_function=generate_func_call_assignment(cur_retval, lside_counter - rside_counter);
-                rside_counter=rside_counter+returned_from_function-1;
-                i=i+returned_from_function-1;
+                returned_from_function =
+                    generate_func_call_assignment(cur_retval, lside_counter - rside_counter);
+                rside_counter = rside_counter + returned_from_function - 1;
+                i = i + returned_from_function - 1;
                 break;
             case AST_NODE_BINOP:
                 generate_binop_assignment(cur_retval);
@@ -861,8 +853,7 @@ void process_return_node(ast_node_t *return_node)
             }
             rside_counter++;
             cur_retval = cur_retval->next;
-        }
-        else{
+        } else {
             OUTPUT_CODE_LINE("PUSHS nil@nil");
         }
     }
@@ -1023,7 +1014,7 @@ void process_assignment_node(ast_node_t *cur_node)
                 switch(expression->node_type) {
                 case AST_NODE_SYMBOL:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_symbol_push(expression); 
+                    generate_symbol_push(expression);
                     break;
                 case AST_NODE_INTEGER:
                     OUTPUT_CODE_PART("PUSHS ");
@@ -1043,7 +1034,7 @@ void process_assignment_node(ast_node_t *cur_node)
                     break;
                 case AST_NODE_NIL:
                     OUTPUT_CODE_PART("PUSHS ");
-                    generate_nil_push(); 
+                    generate_nil_push();
                     break;
                 case AST_NODE_FUNC_CALL:
                     generate_func_call_assignment_RL(expression,
@@ -1097,7 +1088,7 @@ void process_node_func_call(ast_node_t *cur_node)
         switch(cur_arg->node_type) {
         case AST_NODE_SYMBOL:
             OUTPUT_CODE_PART("PUSHS ");
-            generate_symbol_push(cur_arg); 
+            generate_symbol_push(cur_arg);
             break;
         case AST_NODE_INTEGER:
             OUTPUT_CODE_PART("PUSHS ");
@@ -1620,7 +1611,6 @@ void generate_chr()
     OUTPUT_CODE_LINE("DEFVAR LF@%param0");
     OUTPUT_CODE_LINE("MOVE LF@%param0 LF@%0");
 
-
     OUTPUT_CODE_LINE("JUMPIFEQ CHR_NIL LF@%param0 nil@nil"); // if i is nil
 
     OUTPUT_CODE_LINE("GT GF@result LF@%param0 int@255");
@@ -1628,8 +1618,6 @@ void generate_chr()
 
     OUTPUT_CODE_LINE("LT GF@result LF@%param0 int@0");
     OUTPUT_CODE_LINE("JUMPIFEQ CHR_OUT GF@result bool@true");
-
-    
 
     OUTPUT_CODE_LINE("JUMP CHR_OK");
     OUTPUT_CODE_LINE("LABEL CHR_OUT");
@@ -1930,20 +1918,33 @@ void exponentiation()
 void generate_builtin()
 {
     // Builtin functions
-    generate_reads();
-    EMPTY_LINE;
-    generate_readi();
-    EMPTY_LINE;
-    generate_readn();
-    EMPTY_LINE;
-    generate_tointeger();
-    EMPTY_LINE;
-    generate_chr();
-    EMPTY_LINE;
-    generate_ord();
-    EMPTY_LINE;
-    generate_substring();
-
+    if(sem_is_builtin_used("reads") || !optimus_prime) {
+        generate_reads();
+        EMPTY_LINE;
+    }
+    if(sem_is_builtin_used("readi") || !optimus_prime) {
+        generate_readi();
+        EMPTY_LINE;
+    }
+    if(sem_is_builtin_used("readn") || !optimus_prime) {
+        generate_readn();
+        EMPTY_LINE;
+    }
+    if(sem_is_builtin_used("tointeger") || !optimus_prime) {
+        generate_tointeger();
+        EMPTY_LINE;
+    }
+    if(sem_is_builtin_used("chr") || !optimus_prime) {
+        generate_chr();
+        EMPTY_LINE;
+    }
+    if(sem_is_builtin_used("ord") || !optimus_prime) {
+        generate_ord();
+        EMPTY_LINE;
+    }
+    if(sem_is_builtin_used("substr") || !optimus_prime) {
+        generate_substring();
+    }
     // My functions
     EMPTY_LINE;
     int_zerodivcheck();
