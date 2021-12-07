@@ -13,6 +13,36 @@
 
 #define alloc_error() fprintf(stderr, "error: not enough memory\n");
 
+
+#ifdef DBG
+
+static int dbgseverity = 6;
+
+    #define PRINT(severity, ...)                                                                   \
+        if(severity >= dbgseverity) {                                                              \
+            fprintf(stderr, __VA_ARGS__);                                                          \
+        }
+
+    #define DPRINT(severity, depth, ...)                                                           \
+        if(severity >= dbgseverity) {                                                              \
+            fprintf(stderr, "<%d> ", depth);                                                       \
+            fprintf(stderr, __VA_ARGS__);                                                          \
+        }
+
+#else
+
+    #define PRINT(...)                                                                             \
+        do {                                                                                       \
+        } while(0);
+
+    #define DPRINT(depth, ...)                                                                     \
+        (void) depth;                                                                              \
+        do {                                                                                       \
+        } while(0);
+
+#endif
+
+
 static ast_node_t **node_list_append(ast_node_list_t *node_list, ast_node_t *node)
 {
     while(*node_list) {
@@ -64,21 +94,22 @@ static ast_node_t *alloc_break_node()
     return node;
 }
 
-#include <stdarg.h>
-static void print(int depth, const char *str, ...)
-{
-    va_list args;
-    va_start(args, str);
-    for(int i = 0; i < depth << 2; i++) {
-        fputc(' ', stderr);
-    }
-    vfprintf(stderr, str, args);
-    fputc('\n', stderr);
-    va_end(args);
-}
+//#include <stdarg.h>
+// static void DPRINT(3, int depth, const char *str, ...)
+//{
+//    va_list args;
+//    va_start(args, str);
+//    for(int i = 0; i < depth << 2; i++) {
+//        fputc(' ', stderr);
+//    }
+//    vfprintf(stderr, str, args);
+//    fputc('\n', stderr);
+//    va_end(args);
+//}
 
 static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm, int depth)
 {
+    (void) depth;
     bool error = false;
     static ast_node_t **last_root = NULL;
     ast_node_t *new_node;
@@ -175,8 +206,8 @@ static int put_term(ast_node_t **root, token_t token, nterm_type_t parent_nterm,
         break;
     }
     if(error) {
-        print(depth, "error: no AST rule for \"%s\" and token type %s",
-              nterm_to_readable(parent_nterm), term_to_readable(token.token_type));
+        DPRINT(3, depth, "error: no AST rule for \"%s\" and token type %s",
+               nterm_to_readable(parent_nterm), term_to_readable(token.token_type));
         return E_SYN;
     }
     return E_OK;
@@ -214,6 +245,7 @@ static ast_node_type_t nterm_to_ast_type(nterm_type_t nterm_type)
 }
 static int alloc_nterm(nterm_type_t nterm, ast_node_t **root, int depth)
 {
+    (void) depth;
     ast_node_type_t node_type = nterm_to_ast_type(nterm);
 
     // don't allocate nterm if it doesn't have an AST counterpart
@@ -222,7 +254,7 @@ static int alloc_nterm(nterm_type_t nterm, ast_node_t **root, int depth)
     }
 
     // allocate ast node
-    print(depth, "alloc %s", nterm_to_readable(nterm));
+    DPRINT(3, depth, "alloc %s", nterm_to_readable(nterm));
     *root = calloc(1, sizeof(ast_node_t));
     if(*root == NULL) {
         alloc_error();
@@ -234,7 +266,8 @@ static int alloc_nterm(nterm_type_t nterm, ast_node_t **root, int depth)
 
 static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int depth)
 {
-    print(depth, "& %s", nterm_to_readable(nterm));
+    (void) depth;
+    DPRINT(3, depth, "& %s", nterm_to_readable(nterm));
     switch(nterm) {
     case NT_PROGRAM:
         return &(*root)->program.global_statement_list;
@@ -354,7 +387,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
 {
     int err;
 
-    print(depth, "expanding %s", nterm_to_readable(nterm));
+    DPRINT(3, depth, "expanding %s", nterm_to_readable(nterm));
 
     // call precedence parser if expression encountered
     if(nterm == NT_EXPRESSION) {
@@ -387,7 +420,7 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
         return E_SYN;
     }
 
-    print(depth, "(%s, %s)", nterm_to_readable(nterm), term_to_readable(token.token_type));
+    DPRINT(3, depth, "(%s, %s)", nterm_to_readable(nterm), term_to_readable(token.token_type));
 
     // put token back
     unget_token();
@@ -453,67 +486,68 @@ void print_ast(int depth, ast_node_t *root)
     }
     switch(root->node_type) {
     case AST_NODE_FUNC_DECL:
-        print(depth, "func-decl:");
-        print(depth + 1, "name:");
-        print(depth + 2, root->func_decl.name.ptr);
-        print(depth + 1, "return_types:");
+        DPRINT(3, depth, "func-decl:");
+        DPRINT(3, depth + 1, "name:");
+        DPRINT(3, depth + 2, "%s", "root->func_decl.name.ptr");
+        DPRINT(3, depth + 1, "return_types:");
         print_ast_list(depth + 2, root->func_decl.return_types);
-        print(depth + 1, "argument_types:");
+        DPRINT(3, depth + 1, "argument_types:");
         print_ast_list(depth + 2, root->func_decl.argument_types);
         break;
     case AST_NODE_FUNC_DEF:
-        print(depth, "func-def:");
-        print(depth + 1, "name:");
-        print(depth + 2, root->func_def.name.ptr);
-        print(depth + 1, "return_types:");
+        DPRINT(3, depth, "func-def:");
+        DPRINT(3, depth + 1, "name:");
+        DPRINT(3, depth + 2, "%s", "root->func_def.name.ptr");
+        DPRINT(3, depth + 1, "return_types:");
         print_ast_list(depth + 2, root->func_def.return_types);
-        print(depth + 1, "arguments:");
+        DPRINT(3, depth + 1, "arguments:");
         print_ast_list(depth + 2, root->func_def.arguments);
         print_ast(depth + 2, root->func_def.body);
         break;
     case AST_NODE_FUNC_CALL:
-        print(depth, "func-call:");
-        print(depth + 1, "name:");
-        print(depth + 2, root->func_call.name.ptr);
-        print(depth + 1, "arguments:");
+        DPRINT(3, depth, "func-call:");
+        DPRINT(3, depth + 1, "name:");
+        DPRINT(3, depth + 2, "%s", "root->func_call.name.ptr");
+        DPRINT(3, depth + 1, "arguments:");
         print_ast_list(depth + 2, root->func_call.arguments);
         break;
     case AST_NODE_DECLARATION:
         // was segfaulting
-        print(depth, "decl:");
+        DPRINT(3, depth, "decl:");
         // print_ast(depth + 1, root->declaration.symbol);
         symbol_t sym_decl = (root->declaration.symbol.is_declaration)
                                 ? root->declaration.symbol
                                 : *root->declaration.symbol.declaration;
-        print(depth, "sym: %s: %s", sym_decl.name.ptr, type_to_readable(sym_decl.type));
+        (void) sym_decl;
+        DPRINT(3, depth, "sym: %s: %s", sym_decl.name.ptr, type_to_readable(sym_decl.type));
         if(root->declaration.assignment) {
-            print(depth + 1, "assign:");
+            DPRINT(3, depth + 1, "assign:");
             print_ast(depth + 2, root->declaration.assignment);
         }
         break;
     case AST_NODE_ASSIGNMENT:
-        print(depth, "assignment:");
-        print(depth + 1, "identifiers:");
+        DPRINT(3, depth, "assignment:");
+        DPRINT(3, depth + 1, "identifiers:");
         print_ast_list(depth + 2, root->assignment.identifiers);
-        print(depth + 1, "expressions:");
+        DPRINT(3, depth + 1, "expressions:");
         print_ast_list(depth + 2, root->assignment.expressions);
         break;
     case AST_NODE_PROGRAM:
-        print(depth, "prog:");
-        print(depth + 1, "require: %s", root->program.require.ptr);
-        print(depth + 1, "global_statements:");
+        DPRINT(3, depth, "prog:");
+        DPRINT(3, depth + 1, "require: %s", root->program.require.ptr);
+        DPRINT(3, depth + 1, "global_statements:");
         print_ast_list(depth + 2, root->program.global_statement_list);
         break;
     case AST_NODE_BODY:
-        print(depth, "body:");
+        DPRINT(3, depth, "body:");
         print_ast_list(depth + 1, root->body.statements);
         break;
     case AST_NODE_IF:
-        print(depth, "if:");
+        DPRINT(3, depth, "if:");
         ast_node_list_t conds = root->if_condition.conditions;
         ast_node_list_t bodies = root->if_condition.bodies;
         while(conds != NULL && bodies != NULL) {
-            print(depth + 1, "cond:");
+            DPRINT(3, depth + 1, "cond:");
             print_ast(depth + 2, conds);
             print_ast(depth + 1, bodies);
             conds = conds->next;
@@ -524,36 +558,36 @@ void print_ast(int depth, ast_node_t *root)
         }
         break;
     case AST_NODE_WHILE:
-        print(depth, "while:");
-        print(depth + 1, "cond:");
+        DPRINT(3, depth, "while:");
+        DPRINT(3, depth + 1, "cond:");
         print_ast(depth + 2, root->while_loop.condition);
         print_ast(depth + 1, root->while_loop.body);
         break;
     case AST_NODE_REPEAT:
-        print(depth, "repeat:");
-        print(depth + 1, "cond:");
+        DPRINT(3, depth, "repeat:");
+        DPRINT(3, depth + 1, "cond:");
         print_ast(depth + 2, root->repeat_loop.condition);
         print_ast(depth + 1, root->repeat_loop.body);
         break;
     case AST_NODE_FOR:
-        print(depth, "for:");
-        print(depth + 1, "iterator:");
+        DPRINT(3, depth, "for:");
+        DPRINT(3, depth + 1, "iterator:");
         print_ast(depth + 2., root->for_loop.iterator);
-        print(depth + 1, "setup:");
+        DPRINT(3, depth + 1, "setup:");
         print_ast(depth + 2, root->for_loop.setup);
-        print(depth + 1, "condition:");
+        DPRINT(3, depth + 1, "condition:");
         print_ast(depth + 2, root->for_loop.condition);
         if(root->for_loop.step) {
-            print(depth + 1, "step:");
+            DPRINT(3, depth + 1, "step:");
             print_ast(depth + 2, root->for_loop.condition);
         }
         print_ast(depth + 1, root->for_loop.body);
         break;
     case AST_NODE_BREAK:
-        print(depth, "break");
+        DPRINT(3, depth, "break");
         break;
     case AST_NODE_RETURN:
-        print(depth, "return:");
+        DPRINT(3, depth, "return:");
         ast_node_t *values = root->return_values.values;
         while(values) {
             print_ast(depth + 1, values);
@@ -561,38 +595,39 @@ void print_ast(int depth, ast_node_t *root)
         }
         break;
     case AST_NODE_BINOP:
-        print(depth, "binop: %d", root->binop.type);
+        DPRINT(3, depth, "binop: %d", root->binop.type);
         print_ast(depth + 1, root->binop.left);
         print_ast(depth + 1, root->binop.right);
         break;
     case AST_NODE_UNOP:
-        print(depth, "unop: %d", root->unop.type);
+        DPRINT(3, depth, "unop: %d", root->unop.type);
         print_ast(depth + 1, root->unop.operand);
         break;
     case AST_NODE_TYPE:
-        print(depth, "type: %s", type_to_readable(root->type));
+        DPRINT(3, depth, "type: %s", type_to_readable(root->type));
         break;
     case AST_NODE_INTEGER:
-        print(depth, "int: %d", root->integer);
+        DPRINT(3, depth, "int: %ld", root->integer);
         break;
     case AST_NODE_NUMBER:
-        print(depth, "number: %.02f", root->number);
+        DPRINT(3, depth, "number: %.02f", root->number);
         break;
     case AST_NODE_BOOLEAN:
-        print(depth, "bool: %s", root->boolean ? "true" : "false");
+        DPRINT(3, depth, "bool: %s", root->boolean ? "true" : "false");
         break;
     case AST_NODE_SYMBOL:;
         symbol_t sym = (root->symbol.is_declaration) ? root->symbol : *root->symbol.declaration;
-        print(depth, "sym: (%s: %s)", sym.name.ptr, type_to_readable(sym.type));
+        DPRINT(3, depth, "sym: (%s: %s)", sym.name.ptr, type_to_readable(sym.type));
+        (void) sym;
         break;
     case AST_NODE_STRING:
-        print(depth, "str: \"%s\"", root->string.ptr);
+        DPRINT(3, depth, "str: \"%s\"", root->string.ptr);
         break;
     case AST_NODE_NIL:
-        print(depth, "nil");
+        DPRINT(3, depth, "nil");
         break;
     case AST_NODE_INVALID:
-        print(depth, "INVALID NODE");
+        DPRINT(3, depth, "INVALID NODE");
         break;
     }
 }
