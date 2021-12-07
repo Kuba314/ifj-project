@@ -343,10 +343,10 @@ static ast_node_t **get_node_ref(ast_node_t **root, nterm_type_t nterm, int dept
     case NT_GLOBAL_STATEMENT:         // wait for certain keyword to distinguish asts
         return root;
     default:
-        fprintf(stderr, "warn: fall through %s\n", nterm_to_readable(nterm));
+        print(depth, "warn: fall through %s\n", nterm_to_readable(nterm));
         return root;
     }
-    fprintf(stderr, "error: parser-int: unknown nterm_ref of %s\n", nterm_to_readable(nterm));
+    print(depth, "error: parser-int: unknown nterm_ref of %s\n", nterm_to_readable(nterm));
     return NULL;
 }
 
@@ -382,8 +382,9 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
     exp_list_t exp_list = table->data[parser_get_table_index(nterm, token.token_type)];
     if(!exp_list.valid) {
         // invalid rule
-        fprintf(stderr, "error: parser: invalid rule for %s and %s\n", nterm_to_readable(nterm),
-                term_to_readable(token.token_type));
+        fprintf(stderr, "error:%d:%d: parser: unexpected token \"%s\" (expanding \"%s\")\n",
+                token.row, token.column, term_to_readable(token.token_type),
+                nterm_to_readable(nterm));
         return E_SYN;
     }
 
@@ -393,7 +394,6 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
     unget_token();
 
     if((err = alloc_nterm(nterm, root, depth))) {
-        fprintf(stderr, "error: couldn't allocate AST node\n");
         return err;
     }
 
@@ -421,8 +421,9 @@ int parse(nterm_type_t nterm, ast_node_t **root, int depth)
             }
 
             if(token.token_type != expected.term) {
-                fprintf(stderr, "error: parser: expected \"%s\", but got \"%s\"\n",
-                        term_to_readable(expected.term), term_to_readable(token.token_type));
+                fprintf(stderr, "error:%d:%d: parser: expected \"%s\" but got \"%s\"\n", token.row,
+                        token.column, term_to_readable(expected.term),
+                        term_to_readable(token.token_type));
                 return E_SYN;
             } else {
                 if((err = put_term(root, token, nterm, depth))) {
