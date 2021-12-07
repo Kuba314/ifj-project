@@ -455,7 +455,7 @@ int generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
         return 0;
     }
 
-    if(rvalue->next == NULL) { // We can return more than one value if the last item in list is
+    else { // We can return more than one value if the last item in list is
                                // function and pad with nil if an argument is missing.
         int ret_count;
         if(rvalue->func_call.def){
@@ -812,6 +812,7 @@ void process_return_node(ast_node_t *return_node)
 {
     int lside_counter = count_children(return_node->return_values.def->return_types);
     int rside_counter = 0;
+    int returned_from_function;
     ast_node_t *cur_retval = return_node->return_values.values;
     for(int i = 0; i < lside_counter; i++) {
         if(cur_retval) {
@@ -841,8 +842,9 @@ void process_return_node(ast_node_t *return_node)
                 generate_nil_push();
                 break;
             case AST_NODE_FUNC_CALL:
-                rside_counter=rside_counter+generate_func_call_assignment(cur_retval, lside_counter - rside_counter)-1;
-                break;
+                returned_from_function=generate_func_call_assignment(cur_retval, lside_counter - rside_counter);
+                rside_counter=rside_counter+returned_from_function-1;
+                i=i+returned_from_function-1;
             case AST_NODE_BINOP:
                 generate_binop_assignment(cur_retval);
                 OUTPUT_CODE_PART("PUSHS ");
@@ -871,7 +873,6 @@ void process_return_node(ast_node_t *return_node)
         OUTPUT_CODE_LINE("POPS GF@result");
         printf("MOVE LF@retval%d GF@result\n", lside_counter - 1 - l);
     }
-    //OUTPUT_CODE_LINE("BREAK");
     OUTPUT_CODE_LINE("POPFRAME");
     OUTPUT_CODE_LINE("RETURN");
 }
