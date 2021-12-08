@@ -531,14 +531,14 @@ static int parse_func_call(deque_t *stack, adt_stack_t *output, token_t *current
     return E_OK;
 }
 
-static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_element_t *sentinel)
+static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_element_t *sentinel,
+                      token_t *current)
 {
     int parentheses_level = 0;
     int result = E_OK;
     stack_element_t *top = NULL;
 
-    token_t current;
-    int r = prec_get_next_token(&current, &parentheses_level);
+    int r = prec_get_next_token(current, &parentheses_level);
 
     if(r != E_OK) {
         DPRINT(7, "Token get error\n");
@@ -555,12 +555,12 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         }
 
         DPRINT(2, "Top: %s\n", term_to_readable(top->token.token_type));
-        DPRINT(2, "Current: %s\n", term_to_readable(current.token_type));
-        if(current.token_type == T_IDENTIFIER) {
-            DPRINT(2, "  current id: %s\n", current.string.ptr);
+        DPRINT(2, "Current: %s\n", term_to_readable(current->token_type));
+        if(current->token_type == T_IDENTIFIER) {
+            DPRINT(2, "  current id: %s\n", current->string.ptr);
         }
         dbg_print(stack, depth, 1);
-        if(current.token_type == T_IDENTIFIER && !return_control) {
+        if(current->token_type == T_IDENTIFIER && !return_control) {
 
             return_control = check_condition(stack, depth, sentinel);
 
@@ -571,13 +571,13 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
                 if(lookahead.token_type == T_LPAREN) {
                     DPRINT(6, "<< Switch to TOP DOWN\n");
 
-                    int r = parse_func_call(stack, output, &current, &parentheses_level, sentinel,
+                    int r = parse_func_call(stack, output, current, &parentheses_level, sentinel,
                                             depth);
                     if(r != E_OK) {
                         return r;
                     }
 
-                    if(current.token_type == T_IDENTIFIER) {
+                    if(current->token_type == T_IDENTIFIER) {
                         return_control = true;
                     }
 
@@ -588,7 +588,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
             }
         }
 
-        if(current.token_type == T_RPAREN) {
+        if(current->token_type == T_RPAREN) {
             if(parentheses_level == -1 && top == sentinel) {
                 unget_token();
                 DPRINT(6, "<< Switch to TOP DOWN (end of func call)\n");
@@ -596,7 +596,7 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
             }
         }
 
-        if(current.token_type == T_MINUS) {
+        if(current->token_type == T_MINUS) {
             DPRINT(1, ">>>> T_MINUS case: \n");
             stack_element_t *current_top = deque_front(stack);
             print_element(current_top, sentinel, 9);
@@ -605,11 +605,11 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
                (current_top == sentinel || is_binary_op(current_top->token.token_type) ||
                 is_unary_op(current_top->token.token_type))) {
                 DPRINT(5, ">> SET TO UNARY\n");
-                current.token_type = T_MINUS_UNARY;
+                current->token_type = T_MINUS_UNARY;
             }
         }
 
-        token_t token = is_table_terminal(current.token_type) ? current : sentinel->token;
+        token_t token = is_table_terminal(current->token_type) ? *current : sentinel->token;
 
         if(top == sentinel && (token.token_type == T_EOF || return_control)) {
             DPRINT(4, "stopping: end condition\n");
@@ -630,14 +630,14 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         case PREC_EQ:
             DPRINT(3, "case prec_eq\n");
             if(!return_control) {
-                result = parser_shift(stack, &current, &parentheses_level, depth, sentinel);
+                result = parser_shift(stack, current, &parentheses_level, depth, sentinel);
             }
             break;
         case PREC_LT:
             DPRINT(3, "case prec_lt\n");
             if(!return_control) {
                 top->mark = true;
-                result = parser_shift(stack, &current, &parentheses_level, depth, sentinel);
+                result = parser_shift(stack, current, &parentheses_level, depth, sentinel);
             }
             break;
         case PREC_GT:
@@ -647,8 +647,8 @@ static int parse_loop(deque_t *stack, adt_stack_t *output, int depth, stack_elem
         case PREC_ZE:
             DPRINT(3, "case prec_void\n");
             DPRINT(3, "Top: %s\n", term_to_readable(top->token.token_type));
-            DPRINT(3, "Current: %s\n", term_to_readable(current.token_type));
-            if(current.token_type == T_IDENTIFIER) {
+            DPRINT(3, "Current: %s\n", term_to_readable(current->token_type));
+            if(current->token_type == T_IDENTIFIER) {
                 parser_reduce(stack, top, output, depth, sentinel);
                 top = parser_top(stack);
                 return_control = true;
@@ -806,7 +806,8 @@ int precedence_parse(ast_node_t **root)
     DPRINT(6, ">> Switch to BOTTOM UP (precedence start)\n");
 
     int r;
-    r = parse_loop(&stack, &right_analysis, depth, sentinel);
+    token_t current;
+    r = parse_loop(&stack, &right_analysis, depth, sentinel, &current);
 
     // DPRINT("Precedence parse end. [%d]\n", r);
     if(r == E_OK) {
@@ -818,9 +819,9 @@ int precedence_parse(ast_node_t **root)
 
         DPRINT(5, "}\n");
 
-        // r = sem_check_expression(*root);
     } else if(r == E_SEM) {
-        fprintf(stderr, "parser: error: couldn't parse expression.\n");
+        fprintf(stderr, "parser: error%d:%d: couldn't parse expression.\n", current.row,
+                current.column);
     }
 
     free_parser_bottom_up(&stack, &right_analysis, sentinel);
