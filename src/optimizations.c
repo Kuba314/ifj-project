@@ -1,4 +1,4 @@
-﻿#include "optimizations.h"
+#include "optimizations.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -717,6 +717,7 @@ static int temp_check_expression(ast_node_t **node, type_t *type, bool is_cond);
 
 int try_unop_optimalization(ast_node_t *operand, type_t optype, type_t *type, ast_node_t **out)
 {
+    (void) type;
     int r = E_OK;
     ast_node_unop_type_t op = (*out)->unop.type;
     PRINT(4, "Unop opt: result: %s\n", type_to_readable(*type));
@@ -781,6 +782,7 @@ int try_unop_optimalization(ast_node_t *operand, type_t optype, type_t *type, as
             }
             (*out)->node_type = AST_NODE_BOOLEAN;
             (*out)->boolean = !v;
+            break;
         }
         default:
             PRINT(6, "Opt: Warn unhandled unopcombination\n");
