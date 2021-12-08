@@ -193,6 +193,7 @@ int sem_get_type(ast_node_t *node, type_t *dest)
         break;
     case AST_NODE_FUNC_CALL:
         *dest = sem_get_func_call_type(node);
+        break;
     default:
         return E_INT;
         break;
