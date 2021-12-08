@@ -23,7 +23,7 @@
 #include "optimizations.h"
 #include "stack.h"
 
-static bool comments = true;
+static bool comments = false;
 
 #define OUTPUT_COMMENT(...)                                                                        \
     if(comments) {                                                                                 \
