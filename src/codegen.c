@@ -1431,9 +1431,6 @@ void process_repeat_until(ast_node_t *cur_node)
     OUTPUT_CODE_PART("JUMPIFEQ ");
     output_label(local_label_counter);
     OUTPUT_CODE_LINE(" GF@result bool@false");
-    OUTPUT_CODE_PART("JUMP ");
-    output_label(local_label_counter);
-    OUTPUT_CODE_LINE("");
     OUTPUT_CODE_PART("LABEL ");
     output_label(second_local_label_counter);
     OUTPUT_CODE_LINE("");
@@ -1495,7 +1492,7 @@ void process_node(ast_node_t *cur_node, int break_label)
         break;
 
     case AST_NODE_REPEAT:
-        process_while_node(cur_node);
+        process_repeat_until(cur_node);
         break;
 
     case AST_NODE_FOR:
