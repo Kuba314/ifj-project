@@ -1,5 +1,5 @@
 /**
- * IFJ21 Scanner
+ * IFJ21 Compiler
  *
  *  Copyright 2021 xkrato61 Pavel Kratochvil
  *
