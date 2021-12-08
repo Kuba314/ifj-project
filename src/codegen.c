@@ -1927,8 +1927,6 @@ void conv_to_int()
     OUTPUT_CODE_LINE("RETURN");
 }
 
-
-
 void generate_builtin()
 {
     // Builtin functions
