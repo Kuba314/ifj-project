@@ -1282,6 +1282,8 @@ void process_assignment_node(ast_node_t *cur_node)
         }
     }
 
+    stack_free(&stack);
+
     //    int cur_max_exp = rside_counter - 1;
     //    for(int l = 0; l < rside_counter; l++) {
     //        expression = cur_node->assignment.expressions;

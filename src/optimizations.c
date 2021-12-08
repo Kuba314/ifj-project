@@ -36,15 +36,21 @@ typedef struct {
     bool is_cycle;
 } scope_t;
 
-static scope_t *scopes;
+static scope_t *scopes = NULL;
 static size_t scope_size;
 static size_t current_scope;
 
-static int init_scopes()
+static void free_scopes()
 {
     if(scopes) {
         free(scopes);
+        scopes = NULL;
     }
+}
+
+static int init_scopes()
+{
+    free_scopes();
     scopes = calloc(1, sizeof(scope_t));
     if(!scopes) {
         return E_INT;
@@ -75,11 +81,12 @@ static int push_scope(bool is_cycle)
     current_scope++;
     if(current_scope >= scope_size) {
         scope_size *= 2;
-        scope_t *temp = realloc(scopes, scope_size);
+        scope_t *temp = (scope_t *) realloc(scopes, scope_size * sizeof(scope_t));
         if(!temp) {
             free(scopes);
             return E_INT;
         }
+        scopes = temp;
         scopes[current_scope].counter = 0;
     }
     scopes[current_scope].is_cycle = is_cycle;
@@ -1463,6 +1470,8 @@ int optimize_ast(ast_node_t *node)
     if(sem_is_builtin_used("write")) {
         gen_usage_write();
     }
+
+    free_scopes();
     return r;
 }
 
