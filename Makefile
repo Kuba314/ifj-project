@@ -31,13 +31,13 @@ vpath %.c src/
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(LIB_OBJECTS) main.o
-	gcc -o $@ $^ $(LDFLAGS)
+	gcc -o $@ $^ -lm
 
 main.o: main.c
 
 # link test files with gtest
 $(TEST_EXECUTABLE): $(TEST_OBJECTS) $(LIB_OBJECTS)
-	$(CC) $(LDFLAGS) -o $@ $^ -lstdc++ -lgtest -lgtest_main -lpthread
+	$(CC) -o $@ $^ -lstdc++ -lgtest -lgtest_main -lpthread -lm
 
 test: $(TEST_EXECUTABLE)
 	./$(TEST_EXECUTABLE)
