@@ -565,35 +565,126 @@ void generate_unop_assignment(ast_node_t *rvalue)
     OUTPUT_CODE_LINE("POPS GF@result");
 }
 
+bool can_be_nil(ast_node_t *node)
+{
+    bool nil_check = !optimus_prime;
+    if(!nil_check) {
+        switch(node->node_type) {
+        case AST_NODE_BINOP:
+            if(!is_not_nil(node->binop.left)) {
+                nil_check = true;
+                break;
+            }
+            if(!is_not_nil(node->binop.right)) {
+                nil_check = true;
+                break;
+            }
+            break;
+        case AST_NODE_UNOP:
+            if(!is_not_nil(node->unop.operand)) {
+                nil_check = true;
+                break;
+            }
+            break;
+        default:
+            if(!is_not_nil(node)) {
+                nil_check = true;
+                break;
+            }
+            break;
+        }
+    }
+    return nil_check;
+}
+
+bool needs_conversion(ast_node_t *node)
+{
+    switch(node->node_type) {
+    case AST_NODE_BINOP: {
+        type_t optype;
+        if(sem_get_type(node, &optype) != E_OK) {
+            return true;
+        }
+        if(optype == TYPE_NUMBER) {
+            type_t left;
+            if(sem_get_type(node->binop.left, &left) != E_OK) {
+                return true;
+            }
+            if(left == TYPE_INTEGER) {
+                return true;
+            }
+            type_t right;
+            if(sem_get_type(node->binop.right, &right) != E_OK) {
+                return true;
+            }
+            if(right == TYPE_INTEGER) {
+                return true;
+            }
+            return false;
+        }
+    } break;
+    case AST_NODE_UNOP: {
+        type_t optype;
+        if(sem_get_type(node, &optype) != E_OK) {
+            return true;
+        }
+        if(optype == TYPE_NUMBER) {
+            type_t type;
+            if(sem_get_type(node->unop.operand, &type) != E_OK) {
+                return true;
+            }
+            if(type == TYPE_INTEGER) {
+                return true;
+            }
+            return false;
+        }
+    } break;
+    default:
+        break;
+    }
+    return true;
+}
+
+void output_conv_check(ast_node_t *node)
+{
+    if(needs_conversion(node)) {
+        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+    }
+}
+
+void output_nil_check(ast_node_t *node)
+{
+    if(can_be_nil(node)) {
+        OUTPUT_CODE_LINE("CALL NIL_CHECK");
+    }
+}
+
 void process_unop_node(ast_node_t *unop_node)
 {
     switch(unop_node->unop.type) {
     case AST_NODE_UNOP_LEN:
         process_binop_node(unop_node->unop.operand);
-        //        if(optimus_prime) {
-        OUTPUT_CODE_LINE("POPS GF@result");
-        OUTPUT_CODE_LINE("JUMPIFEQ NIL_FOUND GF@result nil@nil");
-        //        } else {
-        //            OUTPUT_CODE_LINE("PUSHS int@1");
-        //            OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        //            OUTPUT_CODE_LINE("POPS GF@trash");
-        //            OUTPUT_CODE_LINE("POPS GF@result");
-        //        }
-        OUTPUT_CODE_LINE("STRLEN GF@result GF@result");
-        OUTPUT_CODE_LINE("PUSHS GF@result");
+        if(can_be_nil(unop_node)) {
+            OUTPUT_CODE_LINE("POPS GF@result");
+            OUTPUT_CODE_LINE("JUMPIFEQ NIL_FOUND GF@result nil@nil");
+            OUTPUT_CODE_LINE("STRLEN GF@result GF@result");
+            OUTPUT_CODE_LINE("PUSHS GF@result");
+        }
         break;
     case AST_NODE_UNOP_NOT:
         process_binop_node(unop_node->unop.operand);
         OUTPUT_CODE_LINE("PUSHS int@2");
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(unop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
         OUTPUT_CODE_LINE("POPS GF@trash");
         OUTPUT_CODE_LINE("NOTS");
         break;
     case AST_NODE_UNOP_NEG:
         process_binop_node(unop_node->unop.operand);
         OUTPUT_CODE_LINE("PUSHS int@-1");
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(unop_node);
+        output_conv_check(unop_node);
         OUTPUT_CODE_LINE("MULS");
         break;
     default:
@@ -685,28 +776,36 @@ void process_binop_node(ast_node_t *binop_node)
     }
     switch(binop_node->binop.type) {
     case AST_NODE_BINOP_ADD:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_nil_check(binop_node);
+        output_conv_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
         OUTPUT_CODE_LINE("ADDS");
         break;
     case AST_NODE_BINOP_SUB:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(binop_node);
+        output_conv_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
         OUTPUT_CODE_LINE("SUBS");
         break;
     case AST_NODE_BINOP_MUL:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(binop_node);
+        output_conv_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
         OUTPUT_CODE_LINE("MULS");
         break;
     case AST_NODE_BINOP_DIV:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(binop_node);
         OUTPUT_CODE_LINE("CALL CONV_TO_FLOAT");
         OUTPUT_CODE_LINE("CALL float_zerodivcheck");
         OUTPUT_CODE_LINE("DIVS");
         break;
     case AST_NODE_BINOP_INTDIV:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(binop_node);
         OUTPUT_CODE_LINE("CALL CHECK_IF_INT");
         OUTPUT_CODE_LINE("CALL int_zerodivcheck");
         OUTPUT_CODE_LINE("IDIVS");
@@ -722,7 +821,8 @@ void process_binop_node(ast_node_t *binop_node)
         E = A - (A//B)*B
 
         */
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        output_nil_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
         OUTPUT_CODE_LINE("CALL CONV_TO_INT");
         OUTPUT_CODE_LINE("CALL int_zerodivcheck");
         OUTPUT_CODE_LINE("POPS GF@op2");
@@ -743,33 +843,43 @@ void process_binop_node(ast_node_t *binop_node)
         OUTPUT_CODE_LINE("CALL EXPONENTIATION");
         break;
     case AST_NODE_BINOP_LT:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_nil_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_conv_check(binop_node);
         OUTPUT_CODE_LINE("LTS");
         break;
     case AST_NODE_BINOP_GT:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_nil_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_conv_check(binop_node);
         OUTPUT_CODE_LINE("GTS");
         break;
     case AST_NODE_BINOP_LTE:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_nil_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_conv_check(binop_node);
         OUTPUT_CODE_LINE("GTS");
         OUTPUT_CODE_LINE("NOTS");
         break;
     case AST_NODE_BINOP_GTE:
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_nil_check(binop_node);
+        // OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_conv_check(binop_node);
         OUTPUT_CODE_LINE("LTS");
         OUTPUT_CODE_LINE("NOTS");
         break;
     case AST_NODE_BINOP_EQ:
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        // OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_conv_check(binop_node);
         OUTPUT_CODE_LINE("EQS");
         break;
     case AST_NODE_BINOP_NE:
-        OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        //    OUTPUT_CODE_LINE("CALL CONV_CHECK");
+        output_conv_check(binop_node);
         OUTPUT_CODE_LINE("EQS");
         OUTPUT_CODE_LINE("NOTS");
         break;
@@ -1054,32 +1164,40 @@ void process_assignment_node(ast_node_t *cur_node)
             generate_integer_push(expression);
             break;
         case AST_NODE_NUMBER:
-            OUTPUT_CODE_PART("PUSHS ");
+            OUTPUT_CODE("MOVE LF@%s ", get_symbol_name(&identifier->symbol));
             generate_number_push(expression);
-            OUTPUT_CODE_PART("POPS LF@");
-            print_symbol(&identifier->symbol);
-            OUTPUT_CODE_LINE("\n");
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_number_push(expression);
+            //            OUTPUT_CODE_PART("POPS LF@");
+            //            print_symbol(&identifier->symbol);
+            //            OUTPUT_CODE_LINE("\n");
             break;
         case AST_NODE_BOOLEAN:
-            OUTPUT_CODE_PART("PUSHS ");
+            OUTPUT_CODE("MOVE LF@%s ", get_symbol_name(&identifier->symbol));
             generate_bool_push(expression);
-            OUTPUT_CODE_PART("POPS LF@");
-            print_symbol(&identifier->symbol);
-            OUTPUT_CODE_LINE("\n");
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_bool_push(expression);
+            //            OUTPUT_CODE_PART("POPS LF@");
+            //            print_symbol(&identifier->symbol);
+            //            OUTPUT_CODE_LINE("\n");
             break;
         case AST_NODE_STRING:
-            OUTPUT_CODE_PART("PUSHS ");
+            OUTPUT_CODE("MOVE LF@%s ", get_symbol_name(&identifier->symbol));
             generate_string_push(expression);
-            OUTPUT_CODE_PART("POPS LF@");
-            print_symbol(&identifier->symbol);
-            OUTPUT_CODE_LINE("\n");
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_string_push(expression);
+            //            OUTPUT_CODE_PART("POPS LF@");
+            //            print_symbol(&identifier->symbol);
+            //            OUTPUT_CODE_LINE("\n");
             break;
         case AST_NODE_NIL:
-            OUTPUT_CODE_PART("PUSHS ");
+            OUTPUT_CODE("MOVE LF@%s ", get_symbol_name(&identifier->symbol));
             generate_nil_push();
-            OUTPUT_CODE_PART("POPS LF@");
-            print_symbol(&identifier->symbol);
-            OUTPUT_CODE_LINE("\n");
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_nil_push();
+            //            OUTPUT_CODE_PART("POPS LF@");
+            //            print_symbol(&identifier->symbol);
+            //            OUTPUT_CODE_LINE("\n");
             break;
         case AST_NODE_FUNC_CALL:
             stack_push(&stack, identifier);
@@ -2210,32 +2328,20 @@ void generate_header()
     COMMENT("Global variables:");
     OUTPUT_CODE_LINE("DEFVAR GF@result");
     OUTPUT_CODE_LINE("DEFVAR GF@trash");
-    //    gen_gf_defvar(G_GF_STACKRESULT, "stackresult");
-    //    gen_gf_defvar(G_GF_OP1, "op1");
-    //    gen_gf_defvar(G_GF_OP2, "op2");
-    //    gen_gf_defvar(G_GF_TYPE1, "type1");
-    //    gen_gf_defvar(G_GF_TYPE2, "type2");
-    //    gen_gf_defvar(G_GF_STRING0, "string0");
-    //    gen_gf_defvar(G_GF_STRING1, "string1");
-    //    gen_gf_defvar(G_GF_LOOP_ITERATOR, "loop_iterator");
-    //    gen_gf_defvar(G_GF_EXPONENT, "exponent");
-    //    gen_gf_defvar(G_GF_BASE, "base");
-    //    gen_gf_defvar(G_GF_FOR_ITER, "for_iter");
-    //    gen_gf_defvar(G_GF_FOR_CONDITION, "for_condition");
-    //    gen_gf_defvar(G_GF_FOR_STEP, "for_step");
-    OUTPUT_CODE_LINE("DEFVAR GF@stackresult");
-    OUTPUT_CODE_LINE("DEFVAR GF@op1");
-    OUTPUT_CODE_LINE("DEFVAR GF@op2");
-    OUTPUT_CODE_LINE("DEFVAR GF@type1");
-    OUTPUT_CODE_LINE("DEFVAR GF@type2");
-    OUTPUT_CODE_LINE("DEFVAR GF@string0");
-    OUTPUT_CODE_LINE("DEFVAR GF@string1");
-    OUTPUT_CODE_LINE("DEFVAR GF@loop_iterator");
-    OUTPUT_CODE_LINE("DEFVAR GF@exponent");
-    OUTPUT_CODE_LINE("DEFVAR GF@base");
-    OUTPUT_CODE_LINE("DEFVAR GF@for_iter");
-    OUTPUT_CODE_LINE("DEFVAR GF@for_condition");
-    OUTPUT_CODE_LINE("DEFVAR GF@for_step");
+    gen_gf_defvar(G_GF_STACKRESULT, "stackresult");
+    gen_gf_defvar(G_GF_OP1, "op1");
+    gen_gf_defvar(G_GF_OP2, "op2");
+    gen_gf_defvar(G_GF_TYPE1, "type1");
+    gen_gf_defvar(G_GF_TYPE2, "type2");
+    gen_gf_defvar(G_GF_STRING0, "string0");
+    gen_gf_defvar(G_GF_STRING1, "string1");
+    gen_gf_defvar(G_GF_LOOP_ITERATOR, "loop_iterator");
+    gen_gf_defvar(G_GF_EXPONENT, "exponent");
+    gen_gf_defvar(G_GF_BASE, "base");
+    gen_gf_defvar(G_GF_FOR_ITER, "for_iter");
+    gen_gf_defvar(G_GF_FOR_CONDITION, "for_condition");
+    gen_gf_defvar(G_GF_FOR_STEP, "for_step");
+
     OUTPUT_CODE_LINE("JUMP $$main");
     EMPTY_LINE;
     COMMENT("Built-in functions:");
