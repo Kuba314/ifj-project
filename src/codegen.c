@@ -21,7 +21,6 @@
 #include "hashtable_bst.h"
 #include "semantics.h"
 #include "optimizations.h"
-#include "stack.h"
 
 #define OUTPUT_CODE_LINE(code) printf("%s\n", code)
 
@@ -112,7 +111,8 @@ void process_node_func_def(ast_node_t *cur_node);
 
 void process_return_node(ast_node_t *return_node);
 
-// Additional helping functions
+
+//Additional helping functions
 void process_string(char *s);
 
 void look_for_declarations(ast_node_t *root);
@@ -120,6 +120,8 @@ void look_for_declarations(ast_node_t *root);
 void output_label(int label_counter);
 
 void generate_result();
+
+bool get_id_name(symbol_t *node_symbol, char **name);
 
 int count_children(ast_node_list_t children_list);
 
@@ -253,18 +255,24 @@ void process_unop_node(ast_node_t *unop_node);
 void process_node(ast_node_t *cur_node, int break_label);
 void generate_result();
 
-char *get_symbol_name(symbol_t *node_symbol)
-{
-    if(node_symbol->is_declaration) {
-        return node_symbol->name.ptr;
-    } else {
-        return get_symbol_name(node_symbol->declaration);
-    }
-}
-
 void print_symbol(symbol_t *symbol)
 {
-    printf("%s", get_symbol_name(symbol));
+
+    char *name;
+    get_id_name(symbol, &name);
+
+    printf("%s", name);
+}
+
+bool get_id_name(symbol_t *node_symbol, char **name)
+{
+    if(node_symbol->is_declaration) {
+        *name = node_symbol->name.ptr;
+        return true;
+
+    } else {
+        return get_id_name(node_symbol->declaration, name);
+    }
 }
 
 int count_children(ast_node_list_t children_list)
@@ -306,7 +314,11 @@ void push_string_arg(char *string)
 
 void push_id_arg(symbol_t *symbol)
 {
-    printf("LF@%s\n", get_symbol_name(symbol));
+
+    char *name;
+    get_id_name(symbol, &name);
+
+    printf("LF@%s\n", name);
 }
 void push_nil_arg()
 {
@@ -348,7 +360,8 @@ void generate_func_start(char *function_name)
 
 void generate_func_arg(symbol_t *symbol, int i)
 {
-    char *id = get_symbol_name(symbol);
+    char *id;
+    get_id_name(symbol, &id);
     OUTPUT_CODE_PART("DEFVAR LF@");
     printf("%s\n", id);
     OUTPUT_CODE_PART("MOVE LF@");
@@ -464,7 +477,9 @@ void generate_integer_push(ast_node_t *rvalue)
 
 void generate_symbol_push(ast_node_t *rvalue)
 {
-    printf("LF@%s\n", get_symbol_name(&rvalue->symbol));
+    char *id;
+    get_id_name(&rvalue->symbol, &id);
+    printf("LF@%s\n", id);
 }
 
 void generate_number_push(ast_node_t *rvalue)
@@ -521,7 +536,9 @@ void ret_string_arg(char *string)
 
 void ret_id_arg(symbol_t *symbol)
 {
-    printf("LF@%s\n", get_symbol_name(symbol));
+    char *name;
+    get_id_name(symbol, &name);
+    printf("LF@%s\n", name);
 }
 
 void ret_nil_arg()
@@ -565,6 +582,7 @@ void process_unop_node(ast_node_t *unop_node)
         OUTPUT_CODE_LINE("PUSHS GF@result");
         break;
     case AST_NODE_UNOP_NOT:
+        process_binop_node(unop_node->unop.operand);
         OUTPUT_CODE_LINE("PUSHS int@2");
         OUTPUT_CODE_LINE("CALL NIL_CHECK");
         OUTPUT_CODE_LINE("POPS GF@trash");
@@ -861,7 +879,9 @@ void generate_integer_assignment(ast_node_t *rvalue)
 
 void generate_id_assignment(ast_node_t *rvalue)
 {
-    printf("LF@%s\n", get_symbol_name(&rvalue->symbol));
+    char *id;
+    get_id_name(&rvalue->symbol, &id);
+    printf("LF@%s\n", id);
 }
 
 void generate_number_assignment(ast_node_t *rvalue)
@@ -898,7 +918,8 @@ void generate_func_call_assignment_decl(ast_node_t *rvalue)
 
 void generate_declaration(symbol_t *symbol)
 {
-    char *id = get_symbol_name(symbol);
+    char *id;
+    get_id_name(symbol, &id);
 
     void *garbo = NULL;
     if(hashtable_find(&declarations, id, &garbo) != E_OK) {
@@ -909,7 +930,9 @@ void generate_declaration(symbol_t *symbol)
 
 void generate_move(symbol_t *symbol)
 {
-    printf("MOVE LF@%s ", get_symbol_name(symbol));
+    char *id;
+    get_id_name(symbol, &id);
+    printf("MOVE LF@%s ", id);
 }
 
 void process_declaration_node(ast_node_t *cur_node, bool is_in_loop)
@@ -985,14 +1008,6 @@ void process_assignment_node(ast_node_t *cur_node)
         expression_iterator = expression_iterator->next;
     }
 
-    //    adt_stack_t stack;
-    //    if(stack_create(&stack, rside_counter) != E_OK) {
-    //        // todo error
-    //    }
-
-    //    ast_node_t *expression = cur_node->assignment.expressions;
-    //    while(expression &&) {}
-
     ast_node_t *expression;
     int cur_max_exp = rside_counter - 1;
     for(int l = 0; l < rside_counter; l++) {
@@ -1049,9 +1064,9 @@ void process_assignment_node(ast_node_t *cur_node)
 
     ast_node_t *identifier = cur_node->assignment.identifiers;
     while(identifier) {
-        OUTPUT_CODE_PART("POPS LF@");
-        print_symbol(&identifier->symbol);
-        OUTPUT_CODE_LINE("\n");
+        OUTPUT_CODE_LINE("POPS GF@result");
+        generate_move(&identifier->symbol);
+        generate_result();
         identifier = identifier->next;
     }
 }
@@ -1194,10 +1209,14 @@ void process_for_node(ast_node_t *for_node)
     process_node(condition, 0);
     process_node(copy, 0);
 
-    char *iterator_name = get_symbol_name(&iterator->symbol);
-    char *step_name = get_symbol_name(&step->symbol);
-    char *condition_name = get_symbol_name(&condition->symbol);
-    char *copy_name = get_symbol_name(&copy->symbol);
+    char *iterator_name;
+    get_id_name(&iterator->symbol, &iterator_name);
+    char *step_name;
+    get_id_name(&step->symbol, &step_name);
+    char *condition_name;
+    get_id_name(&condition->symbol, &condition_name);
+    char *copy_name;
+    get_id_name(&copy->symbol, &copy_name);
 
     // Konvertuj iterator, step, condition na rovnaky typ.
     OUTPUT_CODE_PART("PUSHS ");
@@ -1410,7 +1429,7 @@ void process_repeat_until(ast_node_t *cur_node)
     OUTPUT_CODE_LINE("CALL EVAL_CONDITION");
     OUTPUT_CODE_LINE("POPS GF@result");
     OUTPUT_CODE_PART("JUMPIFEQ ");
-    output_label(second_local_label_counter);
+    output_label(local_label_counter);
     OUTPUT_CODE_LINE(" GF@result bool@false");
     OUTPUT_CODE_PART("JUMP ");
     output_label(local_label_counter);
@@ -1476,7 +1495,7 @@ void process_node(ast_node_t *cur_node, int break_label)
         break;
 
     case AST_NODE_REPEAT:
-        process_repeat_until(cur_node);
+        process_while_node(cur_node);
         break;
 
     case AST_NODE_FOR:
