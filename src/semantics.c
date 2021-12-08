@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "scanner.h"
+
 #ifdef DBG
 static int dbgseverity = 6;
 
@@ -93,6 +95,19 @@ const char *node_type_to_readable(ast_node_type_t type)
     }
 }
 #endif
+
+static void error_header()
+{
+    token_t token;
+    get_next_token(&token);
+    fprintf(stderr, "parser: error%d:%d: ", token.row, token.column);
+}
+
+#define PRINT_ERROR(message)                                                                       \
+    {                                                                                              \
+        error_header();                                                                            \
+        fprintf(stderr, message);                                                                  \
+    }
 
 static const char *binop_type_to_readable(ast_node_binop_type_t type)
 {
@@ -440,7 +455,8 @@ int check_func_call(ast_node_t *node, bool main_body)
 
         ast_node_list_t return_types = get_func_return_types(sym);
         if(return_types) {
-            fprintf(stderr, "parser: error: function in main body can't return values\n");
+
+            PRINT_ERROR("function in main body can't return values\n");
             return E_TYPE_CALL;
         }
     }
@@ -993,7 +1009,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                     }
                     type_t dest = ids->symbol.declaration->type;
                     if(!check_pass_type_compatibility(source, dest)) {
-                        fprintf(stderr, "parser: error: incompatible types in assignment\n");
+                        PRINT_ERROR("incompatible types in assignment\n");
                         return E_ASSIGN;
                     }
                     exp = exp->next;
@@ -1002,7 +1018,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
 
                 if(ids) {
                     // error: not enoough values
-                    fprintf(stderr, "parser: error: not enough values in assignment\n");
+                    PRINT_ERROR("not enough values in assignment\n");
                     return E_ASSIGN;
                 }
 
@@ -1026,7 +1042,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                     }
                     type_t dest = node->declaration.symbol.type;
                     if(!check_pass_type_compatibility(source, dest)) {
-                        fprintf(stderr, "parser: error: incompatible types in declaration\n");
+                        PRINT_ERROR("incompatible types in declaration\n");
                         return E_ASSIGN;
                     }
                 }
@@ -1122,7 +1138,7 @@ int sem_check(ast_node_t *node, int i, nut_type_t expected)
                     }
                     PRINT(3, "%s vs %s\n", type_to_readable(t1), type_to_readable(t2));
                     if(!check_pass_type_compatibility(t1, t2)) {
-                        fprintf(stderr, "parser: error: incompatible types in return\n");
+                        PRINT_ERROR("incompatible types in return\n");
                         return E_TYPE_CALL;
                     }
 
@@ -1248,7 +1264,8 @@ int check_unop_node(ast_node_t **node, type_t *type)
     }
 
     if(!check_unop_operation((*node)->unop.type, optype)) {
-        fprintf(stderr, "parser: error: cannot use operator '%s' for type %s.\n",
+        error_header();
+        fprintf(stderr, "cannot use operator '%s' for type %s.\n",
                 unop_type_to_readable((*node)->unop.type), type_to_readable(optype));
         return E_TYPE_EXPR;
     }
@@ -1330,12 +1347,12 @@ int check_binop_node(ast_node_t **node, type_t *type)
     if((*node)->binop.type == AST_NODE_BINOP_DIV || (*node)->binop.type == AST_NODE_BINOP_INTDIV) {
         if((*node)->binop.right->node_type == AST_NODE_INTEGER &&
            (*node)->binop.right->integer == 0) {
-            fprintf(stderr, "parser: error: division by 0\n");
+            PRINT_ERROR("division by 0\n");
             return E_ZERODIV;
         }
         if((*node)->binop.right->node_type == AST_NODE_NUMBER &&
            (*node)->binop.right->number == 0) {
-            fprintf(stderr, "parser: error: division by 0\n");
+            PRINT_ERROR("division by 0\n");
             return E_ZERODIV;
         }
     }
@@ -1347,14 +1364,16 @@ int check_binop_node(ast_node_t **node, type_t *type)
               type_to_readable(*type));
         if(r != E_OK) {
             if(r == E_TYPE_EXPR || r == E_NIL) {
-                fprintf(stderr, "parser: error: cannot use operator '%s' for types %s and %s\n",
+                error_header();
+                fprintf(stderr, "cannot use operator '%s' for types %s and %s\n",
                         binop_type_to_readable((*node)->binop.type), type_to_readable(left),
                         type_to_readable(right));
             }
             return r;
         }
         if(!check_binop_operation((*node)->binop.type, *type, type)) {
-            fprintf(stderr, "parser: error: cannot use operator '%s' for types %s and %s\n",
+            error_header();
+            fprintf(stderr, "cannot use operator '%s' for types %s and %s\n",
                     binop_type_to_readable((*node)->binop.type), type_to_readable(left),
                     type_to_readable(right));
             return E_TYPE_EXPR;
