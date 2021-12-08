@@ -1,3 +1,19 @@
+/**
+ * IFJ21 Compiler
+ *
+ *  Copyright 2021
+ *      xrozek02 Jakub Rozek
+ *      xruzaa00 Adam Ruza
+ *
+ *  Licensed under GNU General Public License 3.0 or later.
+ *  Some rights reserved. See COPYING, AUTHORS.
+ *
+ * @license GPL-3.0+ <http://spdx.org/licenses/GPL-3.0+>
+ *
+ * @file ast.h
+ *
+ * @brief AST defininition
+ */
 #pragma once
 
 #include <stdint.h>
