@@ -23,6 +23,16 @@
 #include "optimizations.h"
 #include "stack.h"
 
+static bool comments = true;
+
+#define OUTPUT_COMMENT(...)                                                                        \
+    if(comments) {                                                                                 \
+        printf("# ");                                                                              \
+        printf(__VA_ARGS__);                                                                       \
+    }
+
+#define OUTPUT_CODE(...) printf(__VA_ARGS__)
+
 #define OUTPUT_CODE_LINE(code) printf("%s\n", code)
 
 #define OUTPUT_CODE_PART(code) printf("%s", code)
@@ -180,6 +190,8 @@ void generate_binop_assignment(ast_node_t *rvalue);
 void generate_unop_assignment(ast_node_t *rvalue);
 
 void generate_result();
+
+void process_return_node(ast_node_t *return_node);
 
 void generate_declaration(symbol_t *symbol);
 
@@ -401,6 +413,7 @@ void process_node_func_def(ast_node_t *cur_node)
 void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter)
 {
     process_node_func_call(rvalue);
+
     if(rvalue->next) { // If the func call is not the last in assignment right side, only the first
                        // retval is used.
         OUTPUT_CODE_LINE("PUSHS TF@retval0");
@@ -416,9 +429,9 @@ void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter)
             ret_count = count_children(rvalue->func_call.decl->return_types);
         }
 
-        for(int i = 0; i < ret_count; i++) {
+        for(int i = 0; i < lside_counter; i++) {
             OUTPUT_CODE_PART("PUSHS TF@retval");
-            printf("%d\n", ret_count - 1 - i); // Push all children.
+            printf("%d\n", i); // Push all children.
         }
 
         for(int k = 0; k < lside_counter - ret_count; k++) { // If need be, pad with nils
@@ -430,8 +443,8 @@ void generate_func_call_assignment_RL(ast_node_t *rvalue, int lside_counter)
 int generate_func_call_assignment(ast_node_t *rvalue, int lside_counter)
 {
     process_node_func_call(rvalue);
-    if(rvalue->next) { // If the func call is not the last in assignment right side, only the first
-                       // retval is used.
+    if(rvalue->next) { // If the func call is not the last in assignment right side, only the
+                       // first retval is used.
         OUTPUT_CODE_LINE("PUSHS TF@retval0");
         return 0;
     }
@@ -557,10 +570,15 @@ void process_unop_node(ast_node_t *unop_node)
     switch(unop_node->unop.type) {
     case AST_NODE_UNOP_LEN:
         process_binop_node(unop_node->unop.operand);
-        OUTPUT_CODE_LINE("PUSHS int@1");
-        OUTPUT_CODE_LINE("CALL NIL_CHECK");
-        OUTPUT_CODE_LINE("POPS GF@trash");
+        //        if(optimus_prime) {
         OUTPUT_CODE_LINE("POPS GF@result");
+        OUTPUT_CODE_LINE("JUMPIFEQ NIL_FOUND GF@result nil@nil");
+        //        } else {
+        //            OUTPUT_CODE_LINE("PUSHS int@1");
+        //            OUTPUT_CODE_LINE("CALL NIL_CHECK");
+        //            OUTPUT_CODE_LINE("POPS GF@trash");
+        //            OUTPUT_CODE_LINE("POPS GF@result");
+        //        }
         OUTPUT_CODE_LINE("STRLEN GF@result GF@result");
         OUTPUT_CODE_LINE("PUSHS GF@result");
         break;
@@ -971,6 +989,11 @@ void process_declaration_node(ast_node_t *cur_node, bool is_in_loop)
     }
 }
 
+typedef struct {
+    ast_node_t *source;
+    ast_node_t *dest;
+} assignment_data_t;
+
 void process_assignment_node(ast_node_t *cur_node)
 {
     ast_node_t *identifier_iterator = cur_node->assignment.identifiers;
@@ -986,75 +1009,221 @@ void process_assignment_node(ast_node_t *cur_node)
         expression_iterator = expression_iterator->next;
     }
 
-    //    adt_stack_t stack;
-    //    if(stack_create(&stack, rside_counter) != E_OK) {
-    //        // todo error
-    //    }
+    adt_stack_t stack;
+    if(stack_create(&stack, rside_counter * 2) != E_OK) {
+        // todo error
+    }
 
-    //    ast_node_t *expression = cur_node->assignment.expressions;
-    //    while(expression &&) {}
+    ast_node_t *expression = cur_node->assignment.expressions;
+    ast_node_t *identifier = cur_node->assignment.identifiers;
+    while(expression && identifier) {
 
-    ast_node_t *expression;
-    int cur_max_exp = rside_counter - 1;
-    for(int l = 0; l < rside_counter; l++) {
-        expression = cur_node->assignment.expressions;
-        for(int k = 0; k < rside_counter; k++) {
-            if(k == cur_max_exp) {
-                switch(expression->node_type) {
-                case AST_NODE_SYMBOL:
-                    OUTPUT_CODE_PART("PUSHS ");
+        switch(expression->node_type) {
+        case AST_NODE_SYMBOL:
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_symbol_push(expression);
+            //            OUTPUT_CODE_PART("POPS LF@");
+            //            print_symbol(&);
+            //            OUTPUT_CODE_LINE("\n");
+            {
+                bool push = false;
+                for(ast_node_t *it = cur_node->assignment.identifiers; it; it = it->next) {
+                    if(strcmp(it->symbol.declaration->name.ptr,
+                              identifier->symbol.declaration->name.ptr) == 0) {
+                        push = true;
+                        break;
+                    }
+                }
+                if(push) {
+                    OUTPUT_CODE("PUSHS LF@%s\n", get_symbol_name(&expression->symbol));
+                    stack_push(&stack, identifier);
+                } else {
+                    OUTPUT_CODE("MOVE LF@%s ", get_symbol_name(&identifier->symbol));
                     generate_symbol_push(expression);
-                    break;
-                case AST_NODE_INTEGER:
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_integer_push(expression);
-                    break;
-                case AST_NODE_NUMBER:
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_number_push(expression);
-                    break;
-                case AST_NODE_BOOLEAN:
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_bool_push(expression);
-                    break;
-                case AST_NODE_STRING:
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_string_push(expression);
-                    break;
-                case AST_NODE_NIL:
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_nil_push();
-                    break;
-                case AST_NODE_FUNC_CALL:
-                    generate_func_call_assignment_RL(expression,
-                                                     lside_counter - (rside_counter - 1));
-                    break;
-                case AST_NODE_BINOP:
-                    generate_binop_assignment(expression);
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_result();
-                    break;
-                case AST_NODE_UNOP:
-                    generate_unop_assignment(expression);
-                    OUTPUT_CODE_PART("PUSHS ");
-                    generate_result();
-                    break;
-                default:
-                    break;
+                }
+                // printf("LF@%s\n", );
+            }
+            break;
+        case AST_NODE_INTEGER:
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_integer_push(expression);
+            //            OUTPUT_CODE_PART("POPS LF@");
+            //            print_symbol(&identifier->symbol);
+            //            OUTPUT_CODE_LINE("\n");
+            OUTPUT_CODE("MOVE LF@%s ", get_symbol_name(&identifier->symbol));
+            generate_integer_push(expression);
+            break;
+        case AST_NODE_NUMBER:
+            OUTPUT_CODE_PART("PUSHS ");
+            generate_number_push(expression);
+            OUTPUT_CODE_PART("POPS LF@");
+            print_symbol(&identifier->symbol);
+            OUTPUT_CODE_LINE("\n");
+            break;
+        case AST_NODE_BOOLEAN:
+            OUTPUT_CODE_PART("PUSHS ");
+            generate_bool_push(expression);
+            OUTPUT_CODE_PART("POPS LF@");
+            print_symbol(&identifier->symbol);
+            OUTPUT_CODE_LINE("\n");
+            break;
+        case AST_NODE_STRING:
+            OUTPUT_CODE_PART("PUSHS ");
+            generate_string_push(expression);
+            OUTPUT_CODE_PART("POPS LF@");
+            print_symbol(&identifier->symbol);
+            OUTPUT_CODE_LINE("\n");
+            break;
+        case AST_NODE_NIL:
+            OUTPUT_CODE_PART("PUSHS ");
+            generate_nil_push();
+            OUTPUT_CODE_PART("POPS LF@");
+            print_symbol(&identifier->symbol);
+            OUTPUT_CODE_LINE("\n");
+            break;
+        case AST_NODE_FUNC_CALL:
+            stack_push(&stack, identifier);
+            if(!expression->next) {
+                identifier = identifier->next;
+                while(identifier) {
+                    stack_push(&stack, identifier);
+                    identifier = identifier->next;
                 }
             }
-            expression = expression->next;
-        }
-        cur_max_exp--;
-    }
+            stack_push(&stack, expression);
+            // break;
+            generate_func_call_assignment_RL(expression, lside_counter - (rside_counter - 1));
+            break;
+        case AST_NODE_BINOP:
+            //            generate_binop_assignment(expression);
+            //            OUTPUT_CODE_PART("PUSHS ");
+            //            generate_result();
+            process_binop_node(expression);
+            stack_push(&stack, identifier);
+            stack_push(&stack, expression);
+            break;
+        case AST_NODE_UNOP:
+            // generate_unop_assignment(expression);
+            // OUTPUT_CODE_PART("PUSHS ");
+            // generate_result();
+            process_unop_node(expression);
 
-    ast_node_t *identifier = cur_node->assignment.identifiers;
-    while(identifier) {
-        OUTPUT_CODE_PART("POPS LF@");
-        print_symbol(&identifier->symbol);
-        OUTPUT_CODE_LINE("\n");
+            stack_push(&stack, identifier);
+            stack_push(&stack, expression);
+            break;
+        default:
+            break;
+        }
+
+        if(!identifier) {
+            break;
+        }
+        expression = expression->next;
         identifier = identifier->next;
     }
+
+    while(!stack_empty(&stack)) {
+        ast_node_t *expression = stack_pop(&stack);
+        if(expression->node_type == AST_NODE_SYMBOL) {
+            OUTPUT_CODE("POPS LF@%s\n", get_symbol_name(&expression->symbol));
+            continue;
+        }
+        ast_node_t *identifier = stack_pop(&stack);
+
+        switch(expression->node_type) {
+        case AST_NODE_FUNC_CALL: {
+            // int args = lside_counter - (rside_counter - 1);
+            // generate_func_call_assignment_RL(expression, lside_counter - (rside_counter -
+            // 1));
+            OUTPUT_CODE("POPS LF@%s\n", get_symbol_name(&identifier->symbol));
+            if(!expression->next) {
+                while(!stack_empty(&stack)) {
+                    ast_node_t *identifier = stack_pop(&stack);
+                    OUTPUT_CODE("POPS LF@%s\n", get_symbol_name(&identifier->symbol));
+                }
+            }
+        } break;
+        case AST_NODE_BINOP:
+            // generate_binop_assignment(expression);
+            // OUTPUT_CODE_PART("PUSHS ");
+            // generate_result();
+            OUTPUT_CODE_PART("POPS LF@");
+            print_symbol(&identifier->symbol);
+            OUTPUT_CODE_LINE("\n");
+            break;
+        case AST_NODE_UNOP:
+            // generate_unop_assignment(expression);
+            // OUTPUT_CODE_PART("PUSHS ");
+            // generate_result();
+            OUTPUT_CODE_PART("POPS LF@");
+            print_symbol(&identifier->symbol);
+            OUTPUT_CODE_LINE("\n");
+
+        default:
+            break;
+        }
+    }
+
+    //    int cur_max_exp = rside_counter - 1;
+    //    for(int l = 0; l < rside_counter; l++) {
+    //        expression = cur_node->assignment.expressions;
+    //        for(int k = 0; k < rside_counter; k++) {
+    //            if(k == cur_max_exp) {
+    //                switch(expression->node_type) {
+    //                case AST_NODE_SYMBOL:
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_symbol_push(expression);
+    //                    break;
+    //                case AST_NODE_INTEGER:
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_integer_push(expression);
+    //                    break;
+    //                case AST_NODE_NUMBER:
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_number_push(expression);
+    //                    break;
+    //                case AST_NODE_BOOLEAN:
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_bool_push(expression);
+    //                    break;
+    //                case AST_NODE_STRING:
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_string_push(expression);
+    //                    break;
+    //                case AST_NODE_NIL:
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_nil_push();
+    //                    break;
+    //                case AST_NODE_FUNC_CALL:
+    //                    generate_func_call_assignment_RL(expression,
+    //                                                     lside_counter - (rside_counter - 1));
+    //                    break;
+    //                case AST_NODE_BINOP:
+    //                    generate_binop_assignment(expression);
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_result();
+    //                    break;
+    //                case AST_NODE_UNOP:
+    //                    generate_unop_assignment(expression);
+    //                    OUTPUT_CODE_PART("PUSHS ");
+    //                    generate_result();
+    //                    break;
+    //                default:
+    //                    break;
+    //                }
+    //            }
+    //            expression = expression->next;
+    //        }
+    //        cur_max_exp--;
+    //    }
+
+    //    ast_node_t *identifier = cur_node->assignment.identifiers;
+    //    while(identifier) {
+    //        OUTPUT_CODE_PART("POPS LF@");
+    //        print_symbol(&identifier->symbol);
+    //        OUTPUT_CODE_LINE("\n");
+    //        identifier = identifier->next;
+    //    }
 }
 
 void process_node_func_call(ast_node_t *cur_node)
@@ -1853,15 +2022,15 @@ void exponentiation()
     OUTPUT_CODE_LINE("FLOAT2INT GF@exponent GF@exponent");
     OUTPUT_CODE_LINE("LABEL EXPONENT_INT");
 
-    OUTPUT_CODE_LINE(
-        "JUMPIFEQ FLOAT_BASE string@float GF@type1"); // if base is float, dont convert to float,
-                                                      // otherwise convert it if it is integer
+    OUTPUT_CODE_LINE("JUMPIFEQ FLOAT_BASE string@float GF@type1"); // if base is float, dont convert
+                                                                   // to float, otherwise convert it
+                                                                   // if it is integer
     OUTPUT_CODE_LINE("INT2FLOAT gf@base gf@base");
 
     OUTPUT_CODE_LINE("LABEL FLOAT_BASE");
     OUTPUT_CODE_LINE("JUMPIFEQ EXP_ZERO GF@exponent int@0"); // if e == 0 in b^e
-    OUTPUT_CODE_LINE("LT GF@stackresult GF@exponent int@0"); // If exponent is smaller than zero,
-                                                             // stackresult is true
+    OUTPUT_CODE_LINE("LT GF@stackresult GF@exponent int@0"); // If exponent is smaller than
+                                                             // zero, stackresult is true
     OUTPUT_CODE_LINE("JUMPIFEQ POSEXPONENT GF@stackresult bool@false"); // Exponent is positive
     OUTPUT_CODE_LINE(
         "MUL GF@exponent GF@exponent int@-1"); // Negative exponent is turned to positive
@@ -1931,60 +2100,107 @@ void generate_builtin()
 {
     // Builtin functions
     if(sem_is_builtin_used("reads") || !optimus_prime) {
+        OUTPUT_COMMENT("reads begin\n");
         generate_reads();
+        OUTPUT_COMMENT("reads end\n");
         EMPTY_LINE;
     }
     if(sem_is_builtin_used("readi") || !optimus_prime) {
+        OUTPUT_COMMENT("readi begin\n");
         generate_readi();
+        OUTPUT_COMMENT("readi end\n");
         EMPTY_LINE;
     }
     if(sem_is_builtin_used("readn") || !optimus_prime) {
+        OUTPUT_COMMENT("readn begin\n");
         generate_readn();
+        OUTPUT_COMMENT("readn end\n");
         EMPTY_LINE;
     }
     if(sem_is_builtin_used("tointeger") || !optimus_prime) {
+        OUTPUT_COMMENT("tointeger begin\n");
         generate_tointeger();
+        OUTPUT_COMMENT("tointeger end\n");
         EMPTY_LINE;
     }
     if(sem_is_builtin_used("chr") || !optimus_prime) {
+        OUTPUT_COMMENT("chr begin\n");
         generate_chr();
+        OUTPUT_COMMENT("chr end\n");
         EMPTY_LINE;
     }
     if(sem_is_builtin_used("ord") || !optimus_prime) {
+        OUTPUT_COMMENT("ord begin\n");
         generate_ord();
+        OUTPUT_COMMENT("ord end\n");
         EMPTY_LINE;
     }
     if(sem_is_builtin_used("substr") || !optimus_prime) {
+        OUTPUT_COMMENT("substr begin\n");
         generate_substring();
+        OUTPUT_COMMENT("substr end\n");
     }
     // My functions
     EMPTY_LINE;
+    OUTPUT_COMMENT("int_zerodivcheck begin\n");
     int_zerodivcheck();
+    OUTPUT_COMMENT("int_zerodivcheck end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("float_zerodivcheck begin\n");
     float_zerodivcheck();
+    OUTPUT_COMMENT("float_zerodivcheck end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("nil_check begin\n");
     nil_check();
+    OUTPUT_COMMENT("nil_check end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("check_for_conversion begin\n");
     check_for_conversion();
+    OUTPUT_COMMENT("check_for_conversion end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("check_nil_write begin\n");
     check_nil_write();
+    OUTPUT_COMMENT("check_nil_write end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("eval_condition begin\n");
     eval_condition();
+    OUTPUT_COMMENT("eval_condition end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("exponentiation begin\n");
     exponentiation();
+    OUTPUT_COMMENT("exponentiation end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("check_if_int begin\n");
     check_if_int();
+    OUTPUT_COMMENT("check_if_int end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("conv_to_float begin\n");
     conv_to_float();
+    OUTPUT_COMMENT("conv_to_float end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("zero_step begin\n");
     zero_step();
+    OUTPUT_COMMENT("zero_step end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("for_convert begin\n");
     for_convert();
+    OUTPUT_COMMENT("for_convert end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("should_i_jump begin\n");
     should_i_jump();
+    OUTPUT_COMMENT("should_i_jump end\n");
     EMPTY_LINE;
+    OUTPUT_COMMENT("conv_to_int begin\n");
     conv_to_int();
+    OUTPUT_COMMENT("conv_to_int end\n");
     EMPTY_LINE;
+}
+
+void gen_gf_defvar(int index, char *name)
+{
+    if(gen_is_used(index)) {
+        OUTPUT_CODE("DEFVAR GF@%s\n", name);
+    }
 }
 
 void generate_header()
@@ -1993,12 +2209,25 @@ void generate_header()
     EMPTY_LINE;
     COMMENT("Global variables:");
     OUTPUT_CODE_LINE("DEFVAR GF@result");
+    OUTPUT_CODE_LINE("DEFVAR GF@trash");
+    //    gen_gf_defvar(G_GF_STACKRESULT, "stackresult");
+    //    gen_gf_defvar(G_GF_OP1, "op1");
+    //    gen_gf_defvar(G_GF_OP2, "op2");
+    //    gen_gf_defvar(G_GF_TYPE1, "type1");
+    //    gen_gf_defvar(G_GF_TYPE2, "type2");
+    //    gen_gf_defvar(G_GF_STRING0, "string0");
+    //    gen_gf_defvar(G_GF_STRING1, "string1");
+    //    gen_gf_defvar(G_GF_LOOP_ITERATOR, "loop_iterator");
+    //    gen_gf_defvar(G_GF_EXPONENT, "exponent");
+    //    gen_gf_defvar(G_GF_BASE, "base");
+    //    gen_gf_defvar(G_GF_FOR_ITER, "for_iter");
+    //    gen_gf_defvar(G_GF_FOR_CONDITION, "for_condition");
+    //    gen_gf_defvar(G_GF_FOR_STEP, "for_step");
     OUTPUT_CODE_LINE("DEFVAR GF@stackresult");
     OUTPUT_CODE_LINE("DEFVAR GF@op1");
     OUTPUT_CODE_LINE("DEFVAR GF@op2");
     OUTPUT_CODE_LINE("DEFVAR GF@type1");
     OUTPUT_CODE_LINE("DEFVAR GF@type2");
-    OUTPUT_CODE_LINE("DEFVAR GF@trash");
     OUTPUT_CODE_LINE("DEFVAR GF@string0");
     OUTPUT_CODE_LINE("DEFVAR GF@string1");
     OUTPUT_CODE_LINE("DEFVAR GF@loop_iterator");
