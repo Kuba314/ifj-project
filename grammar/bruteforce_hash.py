@@ -1,3 +1,10 @@
+##
+# @file bruteforce_hash.py
+# @author xrozek02 Jakub Rozek
+#
+# @brief bruteforce term and nterm order in enums with the smallest mod for hash function
+#
+
 from grammar_definition import table, terminals as ts, non_terminals as nts
 from typing import Dict, List
 import json

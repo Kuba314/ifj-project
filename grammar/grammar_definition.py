@@ -1,9 +1,18 @@
+##
+# @file grammar_definition.py
+# @author xrozek02 Jakub Rozek
+#
+# @brief define grammar rules, build LL table
+#
+
 from typing import Set, Dict, List
 
 def is_term(t):
     return t in terminals
 
+## BEGIN BORROWED CODE
 # https://github.com/PranayT17/Finding-FIRST-and-FOLLOW-of-given-grammar/blob/master/first_follow.py
+# edited in order for me to understand how it works
 def get_first(seq: List[str]) -> Set[str]:
 
     if len(seq) == 1:
@@ -39,7 +48,6 @@ def get_first(seq: List[str]) -> Set[str]:
 
     return first | tmp_first - {EPS}
 
-
 def get_follow(nT: str, parents: List[str]) -> Set[str]:
 
     parents = parents[:] + [nT]
@@ -68,6 +76,7 @@ def get_follow(nT: str, parents: List[str]) -> Set[str]:
                 elif nt not in parents:
                     follow |= get_follow(nt, parents)
     return follow
+## END BORROWED CODE
 
 def get_token_name(token):
     if token == '$':

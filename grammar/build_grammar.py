@@ -1,3 +1,10 @@
+##
+# @file build_grammar.py
+# @author xrozek02 Jakub Rozek
+#
+# @brief generate .c and .h files based on brute-forced configuration
+#
+
 from typing import Dict, List, Set, Callable, Any, Tuple
 from grammar_definition import (
     terminals,
