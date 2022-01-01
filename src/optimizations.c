@@ -40,7 +40,7 @@ static int dbgseverity = 1;
         } while(0);
 #endif
 
-bool optimus_prime = true;
+bool optimus_prime = false;
 
 static bool gen_map[G_GF_FOR_STEP + 1];
 static int stage;
