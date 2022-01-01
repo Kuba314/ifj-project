@@ -20,6 +20,7 @@ COV_REPORT_FILES = coverage/ $(shell find . -type f \( -name '*.gc??' -o -name '
 ALL_OBJECTS = $(shell find . -type f -name '*.o')
 ALL_SOURCE_FILES = $(shell find . -type f -name '*.c')
 ALL_HEADER_FILES = $(shell find . -type f -name '*.h')
+ALL_PYTHON_FILES = $(shell find . -type f -name '*.py')
 OBJ=$(SRC:.c=.o)
 
 .PHONY: all test doc clean pack is_it_ok
@@ -48,7 +49,7 @@ doc:
 
 pack: clean doc
 	mkdir -p $(DEP_DIR)
-	cp $(ALL_SOURCE_FILES) $(ALL_HEADER_FILES) $(DOC_DIR)/$(DOC).pdf rozdeleni rozsireni Makefile $(DEP_DIR)/
+	cp $(ALL_SOURCE_FILES) $(ALL_HEADER_FILES) $(ALL_PYTHON_FILES) $(DOC_DIR)/$(DOC).pdf rozdeleni rozsireni Makefile $(DEP_DIR)/
 	cd $(DEP_DIR) && tar -czf $(PACKED_PROJECT) *
 	cp $(DEP_DIR)/$(PACKED_PROJECT) .
 
