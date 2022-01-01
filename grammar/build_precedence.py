@@ -1,4 +1,8 @@
-# derived from build_grammar for precedence table
+##
+# @file build_precedence.py
+# @author xruzaa00 Adam Ruza
+#
+# @brief derived from build_grammar for precedence table generation
 
 from typing import Dict, List, Set, Callable, Any, Tuple
 import subprocess
